@@ -1,0 +1,487 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import '../providers/auth_provider.dart';
+import '../services/api_client.dart';
+import '../services/auth_service.dart';
+import '../utils/colors.dart';
+
+class AdminProdukPage extends StatefulWidget {
+  const AdminProdukPage({super.key});
+
+  @override
+  State<AdminProdukPage> createState() => _AdminProdukPageState();
+}
+
+class _AdminProdukPageState extends State<AdminProdukPage> {
+  List<dynamic> _products = [];
+  List<dynamic> _filtered = [];
+  bool _loading = true;
+  String _search = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() => _loading = true);
+    try {
+      final res = await ApiClient.get('/obat');
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List<dynamic>;
+        if (mounted) {
+          setState(() {
+            _products = list;
+            _filtered = list;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _filter(String query) {
+    setState(() {
+      _search = query.toLowerCase();
+      _filtered = _products.where((p) {
+        final name = (p['nama_obat'] ?? p['name'] ?? '').toString().toLowerCase();
+        return name.contains(_search);
+      }).toList();
+    });
+  }
+
+  Future<void> _hapus(Map<String, dynamic> data) async {
+    final id = (data['id_obat'] ?? data['id'] ?? '').toString();
+    final konfirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hapus Produk?'),
+        content: Text('Yakin ingin menghapus "${data['nama_obat'] ?? 'produk ini'}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (konfirm != true) return;
+
+    try {
+      final authService = AuthService();
+      final token = await authService.token;
+      final res = await ApiClient.delete('/obat/$id', token: token);
+      if (res.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Produk berhasil dihapus'), backgroundColor: AppColors.darkGreen),
+          );
+          _loadProducts();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.redAccent));
+      }
+    }
+  }
+
+  void _showForm([Map<String, dynamic>? existing]) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ProdukSheet(
+        existing: existing,
+        onSaved: _loadProducts,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.lightGreen,
+      body: Column(
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 28),
+            decoration: const BoxDecoration(
+              color: AppColors.darkGreen,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Daftar Produk', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.darkGreen,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Tambah', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () => _showForm(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Search Bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
+                  child: TextField(
+                    onChanged: _filter,
+                    decoration: const InputDecoration(
+                      icon: Icon(Icons.search, color: Colors.black26),
+                      hintText: 'Cari produk...',
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // List
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
+                : _filtered.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.inventory_2_outlined, size: 64, color: Colors.black26),
+                            SizedBox(height: 12),
+                            Text('Belum ada produk.', style: TextStyle(color: Colors.black38, fontSize: 16)),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadProducts,
+                        color: AppColors.darkGreen,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                          itemCount: _filtered.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (ctx, i) {
+                            final data = _filtered[i] as Map<String, dynamic>;
+                            return _buildCard(data);
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(Map<String, dynamic> data) {
+    final name = data['nama_obat'] ?? data['name'] ?? '-';
+    final price = data['harga'] ?? 0;
+    final stock = data['jumlah_stok'];
+    final category = data['kategori'];
+    final desc = data['deskripsi'];
+    final imageUrl = data['gambar'] ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 3))],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              imageUrl,
+              width: 64, height: 64, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 64, height: 64,
+                color: AppColors.lightGreen,
+                child: const Icon(Icons.medication, color: AppColors.darkGreen),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text('Rp $price', style: const TextStyle(color: Color(0xFF4299E1), fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 8),
+                    if (stock != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: AppColors.lightGreen, borderRadius: BorderRadius.circular(6)),
+                        child: Text('Stok: $stock', style: const TextStyle(fontSize: 10, color: AppColors.darkGreen, fontWeight: FontWeight.bold)),
+                      ),
+                  ],
+                ),
+                if (category != null && category.toString().isNotEmpty)
+                  Text(category, style: const TextStyle(color: AppColors.darkGreen, fontSize: 11, fontWeight: FontWeight.w500)),
+                if (desc != null)
+                  Text(desc, style: const TextStyle(color: Colors.black45, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, color: AppColors.darkGreen, size: 20),
+                onPressed: () => _showForm(data),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                onPressed: () => _hapus(data),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Bottom Sheet Tambah / Edit Produk ───────────────────────────────────────
+class _ProdukSheet extends StatefulWidget {
+  final Map<String, dynamic>? existing;
+  final VoidCallback onSaved;
+  const _ProdukSheet({this.existing, required this.onSaved});
+
+  @override
+  State<_ProdukSheet> createState() => _ProdukSheetState();
+}
+
+class _ProdukSheetState extends State<_ProdukSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameCtrl, _priceCtrl, _imageCtrl, _descCtrl, _catCtrl, _stockCtrl;
+  Uint8List? _imageBytes;
+  bool _loading = false;
+
+  bool get _isEdit => widget.existing != null;
+  String get _docId => (widget.existing?['id_obat'] ?? widget.existing?['id'] ?? '').toString();
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.existing;
+    _nameCtrl = TextEditingController(text: d?['nama_obat'] ?? d?['name'] ?? '');
+    _priceCtrl = TextEditingController(text: (d?['harga'] ?? d?['price'])?.toString() ?? '');
+    _imageCtrl = TextEditingController(text: d?['gambar'] ?? d?['imageUrl'] ?? '');
+    _descCtrl = TextEditingController(text: d?['deskripsi'] ?? d?['description'] ?? '');
+    _catCtrl = TextEditingController(text: d?['kategori'] ?? d?['category'] ?? '');
+    _stockCtrl = TextEditingController(text: (d?['jumlah_stok'] ?? d?['stock'])?.toString() ?? '');
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_nameCtrl, _priceCtrl, _imageCtrl, _descCtrl, _catCtrl, _stockCtrl]) c.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pilihGambar() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (file != null) {
+      final bytes = await file.readAsBytes();
+      setState(() => _imageBytes = bytes);
+    }
+  }
+
+  Future<void> _simpan() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    try {
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+      if (user == null) throw Exception('Sesi berakhir, login kembali.');
+      final authService = AuthService();
+      final token = await authService.token;
+
+      final fields = <String, String>{
+        'nama_obat': _nameCtrl.text.trim(),
+        'deskripsi': _descCtrl.text.trim(),
+        'kategori': _catCtrl.text.trim(),
+        'harga': _priceCtrl.text.trim(),
+      };
+
+      final streamed = await ApiClient.multipart(
+        method: _isEdit ? 'PUT' : 'POST',
+        endpoint: _isEdit ? '/obat/$_docId' : '/obat',
+        fields: fields,
+        imageBytes: _imageBytes,
+        filename: _imageBytes != null ? 'product_${DateTime.now().millisecondsSinceEpoch}.jpg' : null,
+        token: token,
+      );
+
+      final res = await http.Response.fromStream(streamed);
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final resData = jsonDecode(res.body);
+        final newObat = resData['data'];
+        final newObatId = (newObat?['id_obat'] ?? newObat?['id'] ?? '').toString();
+
+        final stockStr = _stockCtrl.text.trim();
+        if (stockStr.isNotEmpty && user.pharmacyId != null && newObatId.isNotEmpty) {
+          final stockVal = int.tryParse(stockStr) ?? 0;
+          final apotekId = int.tryParse(user.pharmacyId!) ?? 0;
+          if (apotekId > 0 && stockVal > 0) {
+            await ApiClient.post('/stok-obat', {
+              'id_apotek': apotekId,
+              'id_obat': int.parse(newObatId),
+              'jumlah_stok': stockVal,
+            });
+          }
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(_isEdit ? 'Produk diperbarui!' : 'Produk ditambahkan!'), backgroundColor: AppColors.darkGreen),
+          );
+          Navigator.pop(context);
+          widget.onSaved();
+        }
+      } else {
+        throw Exception(jsonDecode(res.body)['message'] ?? 'Gagal menyimpan');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.redAccent));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final existingImg = widget.existing?['gambar'] ?? widget.existing?['imageUrl'];
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(4)))),
+                const SizedBox(height: 16),
+                Text(_isEdit ? 'Edit Produk' : 'Tambah Produk Baru', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                _field('Nama Produk', _nameCtrl, Icons.medication_outlined),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _field('Harga (Rp)', _priceCtrl, Icons.attach_money, keyboard: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _field('Stok', _stockCtrl, Icons.inventory_2_outlined, keyboard: TextInputType.number, required: false)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _field('Kategori', _catCtrl, Icons.category_outlined, required: false),
+                const SizedBox(height: 20),
+                const Text('Foto Produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black54)),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: _pilihGambar,
+                  child: Container(
+                    width: double.infinity,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      color: AppColors.lightGreen.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.darkGreen.withOpacity(0.3)),
+                    ),
+                    child: _imageBytes != null
+                        ? ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.memory(_imageBytes!, fit: BoxFit.cover))
+                        : existingImg != null && existingImg.toString().isNotEmpty
+                            ? ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.network(existingImg, fit: BoxFit.cover))
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_a_photo_outlined, color: AppColors.darkGreen, size: 32),
+                                  SizedBox(height: 8),
+                                  Text('Tap untuk pilih foto', style: TextStyle(color: AppColors.darkGreen, fontSize: 13)),
+                                ],
+                              ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _field('Atau URL Gambar', _imageCtrl, Icons.link_outlined, required: false),
+                const SizedBox(height: 12),
+                _field('Deskripsi', _descCtrl, Icons.description_outlined, required: false, maxLines: 3),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity, height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.darkGreen,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    onPressed: _loading ? null : _simpan,
+                    child: _loading
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(_isEdit ? 'Simpan Perubahan' : 'Tambah Produk',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _field(String label, TextEditingController ctrl, IconData icon,
+      {TextInputType? keyboard, bool required = true, int maxLines = 1}) {
+    return TextFormField(
+      controller: ctrl,
+      keyboardType: keyboard,
+      maxLines: maxLines,
+      validator: required ? (v) => (v == null || v.trim().isEmpty) ? '$label tidak boleh kosong' : null : null,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: AppColors.darkGreen),
+        filled: true,
+        fillColor: AppColors.lightGreen.withOpacity(0.5),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.darkGreen, width: 1.5)),
+      ),
+    );
+  }
+}

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
-import 'register_page.dart';
+import 'package:provider/provider.dart';
 import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 
-void main() {
-  runApp(
-    DevicePreview(
-      enabled: true,
-      builder: (context) => const MedFastApp(),
-    ),
-  );
+import 'providers/auth_provider.dart';
+import 'providers/product_provider.dart';
+import 'providers/cart_provider.dart';
+import 'views/welcome_page.dart';
+import 'views/main_screen.dart';
+import 'views/admin_main_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MedFastApp());
 }
 
 class MedFastApp extends StatelessWidget {
@@ -16,16 +20,64 @@ class MedFastApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      
-      debugShowCheckedModeBanner: false,
-      title: 'MedFast',
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF7F9FC),
-        fontFamily: 'Arial',
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'MedFast',
+        theme: ThemeData(
+          scaffoldBackgroundColor: const Color(0xFFE2ECE4),
+          fontFamily: 'Arial',
+          useMaterial3: true,
+        ),
+        home: const AuthWrapper(),
       ),
-      home: const RegisterPage(),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  late Future<bool> _loginStatusFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loginStatusFuture = Provider.of<AuthProvider>(context, listen: false).checkLoginStatus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _loginStatusFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final isLoggedIn = snapshot.data ?? false;
+        if (isLoggedIn) {
+          final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+          if (user?.role == 'admin') {
+            return const AdminMainScreen();
+          }
+          return const MainScreen();
+        }
+
+        return const WelcomePage();
+      },
     );
   }
 }

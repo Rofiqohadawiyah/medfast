@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "75357252762",
+    "project_id": "medfast-680e7",
+    "storage_bucket": "medfast-680e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:75357252762:android:c7d042c1bdba4629ab4323",
+        "android_client_info": {
+          "package_name": "com.example.medfast"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQSu7I3PprXbTWVCdziXw9vKbrGQ-1pNw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
