@@ -6,6 +6,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../utils/colors.dart';
 import 'chat_page.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class PesananPage extends StatefulWidget {
   const PesananPage({super.key});
@@ -17,11 +18,69 @@ class PesananPage extends StatefulWidget {
 class _PesananPageState extends State<PesananPage> {
   List<dynamic> _orders = [];
   bool _isLoading = true;
+  IO.Socket? _socket;
 
   @override
   void initState() {
     super.initState();
     _fetchOrders();
+    _initSocket();
+  }
+
+  @override
+  void dispose() {
+    _socket?.disconnect();
+    _socket?.dispose();
+    super.dispose();
+  }
+
+  void _initSocket() {
+    try {
+      final rawUrl = ApiClient.baseUrl;
+      final socketUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/api'));
+
+      debugPrint('Initializing Customer Order Socket with URL: $socketUrl');
+
+      _socket = IO.io(
+        socketUrl,
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .disableAutoConnect()
+            .build(),
+      );
+
+      _socket!.connect();
+
+      _socket!.onConnect((_) {
+        debugPrint('Customer Order Socket connected successfully');
+        final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+        if (user != null) {
+          debugPrint('Customer Order Socket: Joining orders updates for user ${user.uid}');
+          _socket!.emit('join_orders_updates', user.uid);
+        } else {
+          debugPrint('Customer Order Socket: userModel is null');
+        }
+      });
+
+      _socket!.onConnectError((err) {
+        debugPrint('Customer Order Socket connection error: $err');
+      });
+
+      _socket!.onError((err) {
+        debugPrint('Customer Order Socket error: $err');
+      });
+
+      _socket!.on('order_status_updated', (data) {
+        debugPrint('Order status updated event received: $data');
+        _fetchOrders();
+      });
+
+      _socket!.onDisconnect((_) {
+        debugPrint('Customer Order Socket disconnected');
+      });
+    } catch (e) {
+      debugPrint('Error order socket init: $e');
+    }
   }
 
   Future<void> _fetchOrders() async {

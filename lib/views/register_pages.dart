@@ -260,7 +260,13 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     bool success = await authProvider.registerAdmin(
-      name, email, password, phone, _foundPharmacyId!, _foundPharmacy!['name'] ?? '',
+      name,
+      email,
+      password,
+      phone,
+      _foundPharmacyId!,
+      _foundPharmacy!['nama_apotek'] ?? _foundPharmacy!['name'] ?? '',
+      kodeApotek: _pharmacyCodeCtrl.text.trim().toUpperCase(),
     );
 
     if (success && mounted) {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
 import '../services/api_client.dart';
+import '../services/auth_service.dart';
 import '../utils/colors.dart';
 import 'admin_main_screen.dart';
 import 'chat_rooms_page.dart';
@@ -37,9 +38,13 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
       final user = Provider.of<AuthProvider>(context, listen: false).userModel;
       final apotekId = user?.pharmacyId;
 
+      final authService = AuthService();
+      final token = await authService.token;
+
+      final obatEndpoint = apotekId != null ? '/stok-obat?id_apotek=$apotekId' : '/obat';
       final results = await Future.wait([
-        ApiClient.get('/obat'),
-        ApiClient.get('/pesanan'),
+        ApiClient.get(obatEndpoint, token: token),
+        ApiClient.get('/pesanan', token: token),
       ]);
 
       final obatRes = results[0];
@@ -59,7 +64,9 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
             : allPesanan;
 
         for (var p in pesanan) {
-          final status = (p['status'] ?? '').toString().toLowerCase();
+          final rawStatus = (p['status_pesanan'] ?? p['status'] ?? '').toString().toLowerCase();
+          final status = rawStatus == 'pending' ? 'menunggu' : rawStatus;
+          
           if (status == 'menunggu') pending++;
           if (status == 'diproses') diproses++;
           if (status == 'selesai') {

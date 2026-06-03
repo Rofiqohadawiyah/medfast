@@ -31,9 +31,28 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
   Future<void> _loadProducts() async {
     setState(() => _loading = true);
     try {
-      final res = await ApiClient.get('/obat');
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+      final apotekId = user?.pharmacyId;
+
+      final endpoint = apotekId != null ? '/stok-obat?id_apotek=$apotekId' : '/obat';
+      final res = await ApiClient.get(endpoint);
       if (res.statusCode == 200) {
-        final list = jsonDecode(res.body) as List<dynamic>;
+        final rawList = jsonDecode(res.body) as List<dynamic>;
+        
+        final list = apotekId != null ? rawList.map((item) {
+          final obat = item['obat'] as Map<String, dynamic>? ?? {};
+          return {
+            'id_obat': item['id_obat'] ?? obat['id_obat'],
+            'id_stok': item['id_stok'],
+            'nama_obat': obat['nama_obat'] ?? '',
+            'harga': obat['harga'] ?? 0,
+            'jumlah_stok': item['jumlah_stok'] ?? 0,
+            'kategori': obat['kategori'] ?? '',
+            'deskripsi': obat['deskripsi'] ?? '',
+            'gambar': obat['gambar'] ?? '',
+          };
+        }).toList() : rawList;
+
         if (mounted) {
           setState(() {
             _products = list;
@@ -60,13 +79,22 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
   }
 
   Future<void> _hapus(Map<String, dynamic> data) async {
-    final id = (data['id_obat'] ?? data['id'] ?? '').toString();
+    final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+    final apotekId = user?.pharmacyId;
+
+    // Jika admin mengelola stok apotek, hapus stok-obat (DELETE /stok-obat/:id_stok)
+    // Jika tidak, hapus obat secara global (DELETE /obat/:id_obat)
+    final idStok = data['id_stok']?.toString();
+    final idObat = (data['id_obat'] ?? data['id'] ?? '').toString();
+    final deleteId = (apotekId != null && idStok != null) ? idStok : idObat;
+    final deletePath = (apotekId != null && idStok != null) ? '/stok-obat' : '/obat';
+
     final konfirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Hapus Produk?'),
-        content: Text('Yakin ingin menghapus "${data['nama_obat'] ?? 'produk ini'}"?'),
+        content: Text('Yakin ingin menghapus "${data['nama_obat'] ?? 'produk ini'}" dari apotek Anda?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           TextButton(
@@ -81,11 +109,11 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
     try {
       final authService = AuthService();
       final token = await authService.token;
-      final res = await ApiClient.delete('/obat/$id', token: token);
+      final res = await ApiClient.delete('$deletePath/$deleteId', token: token);
       if (res.statusCode == 200) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Produk berhasil dihapus'), backgroundColor: AppColors.darkGreen),
+            const SnackBar(content: Text('Produk berhasil dihapus dari apotek'), backgroundColor: AppColors.darkGreen),
           );
           _loadProducts();
         }

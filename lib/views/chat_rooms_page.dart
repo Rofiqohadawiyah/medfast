@@ -66,6 +66,7 @@ class _ChatRoomsPageState extends State<ChatRoomsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Provider.of<AuthProvider>(context).userModel;
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: AppBar(
@@ -130,9 +131,17 @@ class _ChatRoomsPageState extends State<ChatRoomsPage> {
                   itemBuilder: (context, index) {
                     final room = _rooms[index];
                     final apotek = room['apotek'] ?? {};
-                    final apotekName = apotek['nama_apotek'] ?? 'Apotek';
-                    final firstLetter = apotekName.isNotEmpty ? apotekName[0].toUpperCase() : 'A';
+                    final pelanggan = room['pelanggan'] ?? {};
+                    
+                    final isAdmin = user?.role == 'admin';
+                    final displayName = isAdmin
+                        ? (pelanggan['nama'] ?? 'Pelanggan')
+                        : (apotek['nama_apotek'] ?? 'Apotek');
+                    final firstLetter = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
                     final dateStr = _formatDate(room['tanggal_chat']);
+                    final subtitleText = isAdmin
+                        ? 'Pertanyaan seputar produk atau pesanan'
+                        : 'Hubungi apotek untuk info produk atau pengiriman.';
 
                     return Card(
                       elevation: 1.5,
@@ -152,7 +161,7 @@ class _ChatRoomsPageState extends State<ChatRoomsPage> {
                           children: [
                             Expanded(
                               child: Text(
-                                apotekName,
+                                displayName,
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -164,13 +173,13 @@ class _ChatRoomsPageState extends State<ChatRoomsPage> {
                             ),
                           ],
                         ),
-                        subtitle: const Padding(
-                          padding: EdgeInsets.only(top: 4),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            'Hubungi apotek untuk info produk atau pengiriman.',
+                            subtitleText,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Colors.black45, fontSize: 13),
+                            style: const TextStyle(color: Colors.black45, fontSize: 13),
                           ),
                         ),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.black26),
@@ -180,8 +189,8 @@ class _ChatRoomsPageState extends State<ChatRoomsPage> {
                             MaterialPageRoute(
                               builder: (_) => ChatPage(
                                 chatId: room['id_chat'],
-                                roomName: apotekName,
-                                idAdmin: room['id_admin'],
+                                roomName: displayName,
+                                idAdmin: room['id_admin'] ?? 0,
                               ),
                             ),
                           ).then((_) => _fetchRooms());

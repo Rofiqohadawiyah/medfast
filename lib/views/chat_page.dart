@@ -143,9 +143,6 @@ class _ChatPageState extends State<ChatPage> {
       'pesan': text,
     };
 
-    // Emit via socket
-    _socket?.emit('send_message', payload);
-
     // Optimistic UI update
     setState(() {
       _messages.add({
@@ -160,6 +157,27 @@ class _ChatPageState extends State<ChatPage> {
       });
     });
     _scrollToBottom();
+
+    // Kirim pesan lewat HTTP POST agar terjamin masuk database Supabase
+    try {
+      final authService = AuthService();
+      final token = await authService.token;
+      
+      final response = await ApiClient.post('/chat/message', payload, token: token);
+      if (response.statusCode != 201) {
+        throw Exception('Server mengembalikan status ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Gagal mengirim pesan ke server: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengirim pesan: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   bool _isImageUrl(String text) {
@@ -368,12 +386,62 @@ class _ChatPageState extends State<ChatPage> {
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final msg = _messages[index];
-                          final idSenderStr = msg['id_pengirim']?.toString() ?? '';
-                          final isMe = idSenderStr == myIdStr;
                           final text = msg['pesan'] ?? '';
                           final timeStr = _formatTime(msg['waktu_kirim']);
 
-                          return _buildChatBubble(text, isMe, timeStr);
+                          final pengirimMap = msg['pengirim'] as Map<String, dynamic>?;
+                          final senderRole = pengirimMap?['role']?.toString().toLowerCase() ?? 'pelanggan';
+                          
+                          // Tentukan sisi balon chat: kanan (hijau) atau kiri (putih)
+                          final myRole = user?.role?.toLowerCase() ?? 'pelanggan';
+                          bool isOnRightSide = false;
+                          if (myRole == 'admin') {
+                            isOnRightSide = (senderRole == 'admin');
+                          } else {
+                            isOnRightSide = (senderRole == 'pelanggan');
+                          }
+
+                          // Tentukan apakah harus menampilkan header tanggal (per hari)
+                          bool showDayHeader = false;
+                          String dayHeaderText = '';
+                          if (index == 0) {
+                            showDayHeader = true;
+                            dayHeaderText = _getDayHeader(msg['waktu_kirim']);
+                          } else {
+                            final prevMsg = _messages[index - 1];
+                            final currentDay = _getDayHeader(msg['waktu_kirim']);
+                            final prevDay = _getDayHeader(prevMsg['waktu_kirim']);
+                            if (currentDay != prevDay) {
+                              showDayHeader = true;
+                              dayHeaderText = currentDay;
+                            }
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (showDayHeader && dayHeaderText.isNotEmpty)
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.06),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      dayHeaderText,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              _buildChatBubble(text, isOnRightSide, timeStr),
+                            ],
+                          );
                         },
                       ),
           ),
@@ -427,23 +495,23 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildChatBubble(String text, bool isMe, String time) {
+  Widget _buildChatBubble(String text, bool isOnRightSide, String time) {
     return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isOnRightSide ? Alignment.centerRight : Alignment.centerLeft,
       child: Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isOnRightSide ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
             margin: const EdgeInsets.only(top: 4, bottom: 2),
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isMe ? AppColors.darkGreen : Colors.white,
+              color: isOnRightSide ? AppColors.darkGreen : Colors.white,
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(20),
                 topRight: const Radius.circular(20),
-                bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(0),
-                bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(20),
+                bottomLeft: isOnRightSide ? const Radius.circular(20) : const Radius.circular(0),
+                bottomRight: isOnRightSide ? const Radius.circular(0) : const Radius.circular(20),
               ),
               boxShadow: [
                 BoxShadow(
@@ -479,7 +547,7 @@ class _ChatPageState extends State<ChatPage> {
                 : Text(
                     text,
                     style: TextStyle(
-                      color: isMe ? Colors.white : Colors.black87,
+                      color: isOnRightSide ? Colors.white : Colors.black87,
                       fontSize: 15,
                       height: 1.4,
                     ),
@@ -507,6 +575,36 @@ class _ChatPageState extends State<ChatPage> {
       }
       final date = DateTime.parse(cleanStr).toLocal();
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _getDayHeader(String? isoString) {
+    if (isoString == null) return '';
+    try {
+      String cleanStr = isoString.trim();
+      if (!cleanStr.endsWith('Z') && !cleanStr.contains('+') && !cleanStr.contains(RegExp(r'-\d{2}:\d{2}'))) {
+        cleanStr = cleanStr.replaceAll(' ', 'T');
+        cleanStr = '${cleanStr}Z';
+      }
+      final date = DateTime.parse(cleanStr).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final msgDay = DateTime(date.year, date.month, date.day);
+
+      if (msgDay == today) {
+        return 'Hari ini';
+      } else if (msgDay == yesterday) {
+        return 'Kemarin';
+      } else {
+        final months = [
+          'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+          'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+        return '${date.day} ${months[date.month - 1]} ${date.year}';
+      }
     } catch (_) {
       return '';
     }

@@ -41,9 +41,13 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
   Future<void> _loadPesanan() async {
     setState(() => _loading = true);
     try {
-      final res = await ApiClient.get('/pesanan');
+      final authService = AuthService();
+      final token = await authService.token;
+      final res = await ApiClient.get('/pesanan', token: token);
       if (res.statusCode == 200) {
         final all = jsonDecode(res.body) as List<dynamic>;
+        
+        // Filter di-sisi client juga sebagai fallback, meskipun backend sudah menyaringnya
         final filtered = _apotekId != null
             ? all.where((p) => p['id_apotek']?.toString() == _apotekId).toList()
             : all;
@@ -58,11 +62,17 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
 
   List<dynamic> _filterByStatus(String status) {
     if (status == 'Semua') return _pesanan;
-    return _pesanan.where((p) => (p['status'] ?? '').toString().toLowerCase() == status.toLowerCase()).toList();
+    return _pesanan.where((p) {
+      final stat = (p['status_pesanan'] ?? p['status'] ?? '').toString().toLowerCase();
+      // Konversi status 'pending' ke 'menunggu' agar sesuai dengan tab filter
+      final normalized = stat == 'pending' ? 'menunggu' : stat;
+      return normalized == status.toLowerCase();
+    }).toList();
   }
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
+      case 'pending':
       case 'menunggu': return Colors.orange;
       case 'diproses': return Colors.blueAccent;
       case 'dikirim': return Colors.purple;
@@ -74,6 +84,7 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
 
   List<String> _nextStatuses(String current) {
     switch (current.toLowerCase()) {
+      case 'pending':
       case 'menunggu': return ['Diproses', 'Dibatalkan'];
       case 'diproses': return ['Dikirim'];
       case 'dikirim': return ['Selesai'];
@@ -88,7 +99,8 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
     try {
       final authService = AuthService();
       final token = await authService.token;
-      final res = await ApiClient.put('/pesanan/$id', {'status': newStatus}, token: token);
+      // Gunakan 'status_pesanan' agar sesuai dengan payload controller backend
+      final res = await ApiClient.put('/pesanan/$id', {'status_pesanan': newStatus.toLowerCase()}, token: token);
       if (res.statusCode == 200) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -97,7 +109,8 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
           _loadPesanan();
         }
       } else {
-        throw Exception('Gagal mengubah status');
+        final errMsg = jsonDecode(res.body)['message'] ?? 'Gagal mengubah status';
+        throw Exception(errMsg);
       }
     } catch (e) {
       if (mounted) {
@@ -183,10 +196,24 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
 
   Widget _buildPesananCard(Map<String, dynamic> p) {
     final id = p['id_pesanan']?.toString() ?? p['id']?.toString() ?? '-';
-    final status = (p['status'] ?? 'menunggu').toString();
-    final nama = p['nama_pemesan'] ?? p['nama'] ?? 'Pelanggan';
+    
+    // Ambil status_pesanan atau status. Konversi pending -> menunggu agar seragam
+    final rawStatus = (p['status_pesanan'] ?? p['status'] ?? 'menunggu').toString();
+    final status = rawStatus.toLowerCase() == 'pending' ? 'menunggu' : rawStatus;
+
+    // Ambil nama pemesan dari join relasi users
+    final userMap = p['users'] as Map<String, dynamic>?;
+    final nama = userMap?['nama'] ?? p['nama_pemesan'] ?? p['nama'] ?? 'Pelanggan';
+
     final total = (p['total_harga'] as num? ?? 0).toDouble();
-    final tanggal = p['created_at']?.toString().substring(0, 10) ?? '-';
+    
+    // format tanggal
+    String tanggal = '-';
+    final dateRaw = p['tanggal_pesanan'] ?? p['created_at'];
+    if (dateRaw != null) {
+      tanggal = dateRaw.toString().substring(0, 10);
+    }
+    
     final nextList = _nextStatuses(status);
 
     return Container(
@@ -203,7 +230,9 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('#$id', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              Expanded(
+                child: Text(nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -220,10 +249,6 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.person_outline, size: 14, color: Colors.black45),
-              const SizedBox(width: 4),
-              Text(nama, style: const TextStyle(color: Colors.black54, fontSize: 13)),
-              const Spacer(),
               const Icon(Icons.calendar_today_outlined, size: 13, color: Colors.black38),
               const SizedBox(width: 4),
               Text(tanggal, style: const TextStyle(color: Colors.black38, fontSize: 12)),

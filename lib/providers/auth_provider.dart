@@ -104,13 +104,13 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> registerAdmin(String name, String email, String password, String phone, String pharmacyId, String pharmacyName) async {
+  Future<bool> registerAdmin(String name, String email, String password, String phone, String pharmacyId, String pharmacyName, {String? kodeApotek}) async {
     _isLoading = true;
     _errorMessage = '';
     notifyListeners();
 
     try {
-      UserModel? user = await _authService.registerAdmin(name, email, password, phone, pharmacyId, pharmacyName);
+      UserModel? user = await _authService.registerAdmin(name, email, password, phone, pharmacyId, pharmacyName, kodeApotek: kodeApotek);
       if (user != null) {
         _userModel = user;
         _isLoading = false;
