@@ -195,8 +195,6 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
   }
 
   Widget _buildPesananCard(Map<String, dynamic> p) {
-    final id = p['id_pesanan']?.toString() ?? p['id']?.toString() ?? '-';
-    
     // Ambil status_pesanan atau status. Konversi pending -> menunggu agar seragam
     final rawStatus = (p['status_pesanan'] ?? p['status'] ?? 'menunggu').toString();
     final status = rawStatus.toLowerCase() == 'pending' ? 'menunggu' : rawStatus;

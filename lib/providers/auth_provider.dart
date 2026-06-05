@@ -14,6 +14,7 @@ class AuthProvider with ChangeNotifier {
   String get errorMessage => _errorMessage;
 
   Future<bool> checkLoginStatus() async {
+    await Future.microtask(() {});
     _isLoading = true;
     _errorMessage = '';
     notifyListeners();

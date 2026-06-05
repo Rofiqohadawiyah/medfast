@@ -9,7 +9,6 @@ import 'main_screen.dart';
 import 'apotek_page.dart';
 import 'alamat_saya_page.dart';
 import 'keranjang_page.dart';
-import 'apotek_detail_page.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -23,7 +22,6 @@ class _LandingPageState extends State<LandingPage> {
   String _locationName = 'Mendeteksi lokasi...';
   bool _locationLoading = true;
   Map<String, Map<String, dynamic>> _productApotekMap = {};
-  Map<String, dynamic>? _defaultApotek;
 
   @override
   void initState() {
@@ -62,9 +60,6 @@ class _LandingPageState extends State<LandingPage> {
         if (mounted) {
           setState(() {
             _productApotekMap = newMap;
-            if (apoteks.isNotEmpty) {
-              _defaultApotek = apoteks[0];
-            }
           });
         }
       }

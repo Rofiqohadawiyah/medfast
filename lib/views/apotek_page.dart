@@ -89,23 +89,6 @@ class _ApotekPageState extends State<ApotekPage> {
     }
   }
 
-  Future<void> _getUserLocation() async {
-    // GPS fallback method - kept for completeness or direct map trigger
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-      if (mounted) {
-        setState(() {
-          _userLocation = LatLng(position.latitude, position.longitude);
-          _locationLoaded = true;
-        });
-        _mapController.move(_userLocation, 14);
-      }
-    } catch (_) {}
-  }
 
   void _openGoogleMaps(double lat, double lng, String name) async {
     final uri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($name)');
@@ -291,7 +274,6 @@ class _ApotekPageState extends State<ApotekPage> {
               final data = item as Map<String, dynamic>;
               final lat = (data['latitude'] as num?)?.toDouble() ?? 0;
               final lng = (data['longitude'] as num?)?.toDouble() ?? 0;
-              final name = data['nama_apotek'] ?? data['name'] ?? 'Apotek';
               return Marker(
                 point: LatLng(lat, lng),
                 width: 50,

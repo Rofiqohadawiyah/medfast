@@ -115,10 +115,27 @@ class AuthService {
 
       final response = await ApiClient.get('/profile', token: savedToken);
       if (response.statusCode == 200) {
-        final userData = jsonDecode(response.body);
+        final rawData = jsonDecode(response.body);
         
-        // Update local cache
-        await prefs.setString('user_data', response.body);
+        // Handle berbagai struktur response:
+        // { user: {...} }, { data: {...} }, { result: {...} }, atau flat object
+        Map<String, dynamic> userData;
+        if (rawData is Map<String, dynamic>) {
+          Map<String, dynamic>? nested;
+          for (final key in ['user', 'data', 'result']) {
+            final v = rawData[key];
+            if (v is Map<String, dynamic>) {
+              nested = v;
+              break;
+            }
+          }
+          userData = nested ?? rawData;
+        } else {
+          return null;
+        }
+        
+        // Update local cache dengan user object (bukan raw body)
+        await prefs.setString('user_data', jsonEncode(userData));
         
         return UserModel.fromJson(userData);
       }

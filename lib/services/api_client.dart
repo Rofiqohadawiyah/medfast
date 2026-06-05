@@ -1,20 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class ApiClient {
   static String get baseUrl {
-    // URL Server Production (Railway) yang sudah online
     return 'https://medfastapi-production.up.railway.app/api';
-
-    // URL Server Lokal (untuk development)
-    /*
-    if (kIsWeb) {
-      return 'http://localhost:3000/api';
-    }
-    // Menggunakan IP lokal laptop untuk HP fisik (atau 10.0.2.2 untuk emulator)
-    return 'http://192.168.18.129:3000/api';
-    */
   }
 
   // Helper untuk POST request
@@ -102,6 +92,7 @@ class ApiClient {
         'gambar',
         imageBytes,
         filename: filename,
+        contentType: MediaType('image', 'jpeg'),
       ));
     }
     

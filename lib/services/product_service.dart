@@ -20,17 +20,33 @@ class ProductService {
 
   // Tambah produk (Admin)
   Future<void> addProduct(ProductModel product, {String? token}) async {
-    final response = await ApiClient.post('/obat', product.toJson());
+    final response = await ApiClient.post(
+      '/obat',
+      product.toJson(),
+      token: token,
+    );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['message'] ?? 'Gagal menambah obat');
+      throw Exception(
+        jsonDecode(response.body)['message'] ?? 'Gagal menambah obat',
+      );
     }
   }
 
   // Update produk (Admin)
-  Future<void> updateProduct(String id, ProductModel product, {String? token}) async {
-    final response = await ApiClient.put('/obat/$id', product.toJson(), token: token);
+  Future<void> updateProduct(
+    String id,
+    ProductModel product, {
+    String? token,
+  }) async {
+    final response = await ApiClient.put(
+      '/obat/$id',
+      product.toJson(),
+      token: token,
+    );
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['message'] ?? 'Gagal mengupdate obat');
+      throw Exception(
+        jsonDecode(response.body)['message'] ?? 'Gagal mengupdate obat',
+      );
     }
   }
 
@@ -38,7 +54,9 @@ class ProductService {
   Future<void> deleteProduct(String id, {String? token}) async {
     final response = await ApiClient.delete('/obat/$id', token: token);
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['message'] ?? 'Gagal menghapus obat');
+      throw Exception(
+        jsonDecode(response.body)['message'] ?? 'Gagal menghapus obat',
+      );
     }
   }
 }

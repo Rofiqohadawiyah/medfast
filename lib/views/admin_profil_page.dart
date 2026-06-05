@@ -146,7 +146,7 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
     );
   }
 
-  void _showEditApotekDialog() {
+  void _showApotekInfoDialog() {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
     if (user?.pharmacyId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,118 +155,74 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
       return;
     }
 
-    final namaApotekCtrl = TextEditingController(text: _apotekData?['nama_apotek'] ?? '');
-    final alamatCtrl = TextEditingController(text: _apotekData?['alamat'] ?? '');
-    final latCtrl = TextEditingController(text: (_apotekData?['latitude'] ?? _apotekData?['lat'] ?? '').toString());
-    final lngCtrl = TextEditingController(text: (_apotekData?['longitude'] ?? _apotekData?['lng'] ?? '').toString());
-    final jamCtrl = TextEditingController(text: _apotekData?['jam_operasional'] ?? _apotekData?['jam_kerja'] ?? '08:00 - 21:00');
-    final formKey = GlobalKey<FormState>();
+    final namaApotek = _apotekData?['nama_apotek'] ?? '-';
+    final alamat = _apotekData?['alamat'] ?? '-';
+    final lat = (_apotekData?['latitude'] ?? _apotekData?['lat'] ?? '-').toString();
+    final lng = (_apotekData?['longitude'] ?? _apotekData?['lng'] ?? '-').toString();
+    final jam = _apotekData?['jam_operasional'] ?? _apotekData?['jam_kerja'] ?? '-';
 
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: const Text('Kelola Lokasi & Apotek', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: namaApotekCtrl,
-                      decoration: const InputDecoration(labelText: 'Nama Apotek'),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Nama apotek tidak boleh kosong' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: alamatCtrl,
-                      decoration: const InputDecoration(labelText: 'Alamat Apotek'),
-                      maxLines: 2,
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Alamat tidak boleh kosong' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: latCtrl,
-                            decoration: const InputDecoration(labelText: 'Latitude'),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextFormField(
-                            controller: lngCtrl,
-                            decoration: const InputDecoration(labelText: 'Longitude'),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: jamCtrl,
-                      decoration: const InputDecoration(labelText: 'Jam Operasional', hintText: 'Misal: 08:00 - 21:00'),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Jam operasional tidak boleh kosong' : null,
-                    ),
-                  ],
-                ),
-              ),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: const [
+            Icon(Icons.location_on, color: AppColors.darkGreen),
+            SizedBox(width: 8),
+            Text('Info Apotek', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _infoRow(Icons.store_outlined, 'Nama Apotek', namaApotek),
+              const Divider(height: 20),
+              _infoRow(Icons.place_outlined, 'Alamat', alamat),
+              const Divider(height: 20),
+              _infoRow(Icons.my_location_outlined, 'Latitude', lat),
+              const Divider(height: 20),
+              _infoRow(Icons.my_location_outlined, 'Longitude', lng),
+              const Divider(height: 20),
+              _infoRow(Icons.access_time_outlined, 'Jam Operasional', jam),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.darkGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkGreen,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _loading ? null : () async {
-                  if (!formKey.currentState!.validate()) return;
-                  setDialogState(() => _loading = true);
-                  try {
-                    final response = await ApiClient.put(
-                      '/apotek/${user!.pharmacyId}',
-                      {
-                        'nama_apotek': namaApotekCtrl.text.trim(),
-                        'alamat': alamatCtrl.text.trim(),
-                        'latitude': latCtrl.text.trim(),
-                        'longitude': lngCtrl.text.trim(),
-                        'jam_operasional': jamCtrl.text.trim(),
-                      },
-                    );
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
 
-                    if (response.statusCode == 200) {
-                      await _fetchApotekDetails();
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Data apotek berhasil diperbarui'), backgroundColor: AppColors.darkGreen),
-                        );
-                      }
-                    } else {
-                      throw Exception(jsonDecode(response.body)['message'] ?? 'Gagal memperbarui apotek');
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.redAccent),
-                      );
-                    }
-                  } finally {
-                    setDialogState(() => _loading = false);
-                  }
-                },
-                child: const Text('Simpan'),
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppColors.darkGreen, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 11, color: Colors.black45)),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
               ),
             ],
-          );
-        });
-      },
+          ),
+        ),
+      ],
     );
   }
 
@@ -293,40 +249,56 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    'Profile Admin',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.maybePop(context),
+                          child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                        ),
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Data Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 28), // Balance the back arrow
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 32),
                   Container(
-                    width: 100, height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                    width: 120, height: 120,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: const Center(
-                      child: Icon(Icons.admin_panel_settings_rounded, size: 70, color: AppColors.darkGreen),
+                      child: Icon(Icons.person_outline, size: 70, color: Colors.black87),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    user?.name ?? 'Admin',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    user?.name ?? 'Naira Fahira',
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     _apotekData?['nama_apotek'] ?? 'Apotek Mitra',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 32),
 
             // Menus
             Padding(
@@ -335,16 +307,9 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
                 children: [
                   _buildMenuItem(
                     icon: Icons.person_outline,
-                    title: 'Ubah Data Akun Admin',
+                    title: 'Ubah data akun admin',
                     onTap: _showEditProfileDialog,
                   ),
-                  const SizedBox(height: 16),
-                  _buildMenuItem(
-                    icon: Icons.location_on_outlined,
-                    title: 'Kelola Lokasi Apotek',
-                    onTap: _showEditApotekDialog,
-                  ),
-                  const SizedBox(height: 16),
                   _buildMenuItem(
                     icon: Icons.lock_outline,
                     title: 'Password',
@@ -355,7 +320,11 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  _buildMenuItem(
+                    icon: Icons.location_on_outlined,
+                    title: 'Kelola lokasi apotek',
+                    onTap: _showApotekInfoDialog,
+                  ),
                   _buildMenuItem(
                     icon: Icons.logout,
                     title: 'Logout',
@@ -369,6 +338,7 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
                         );
                       }
                     },
+                    isLogout: true,
                   ),
                 ],
               ),
@@ -384,27 +354,35 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    bool isLogout = false,
   }) {
+    final bgColor = isLogout ? const Color(0xFFF5EBEB) : const Color(0xFFEAF5F0);
+    final iconColor = isLogout ? const Color(0xFFC02B48) : Colors.black87;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 3))],
+          borderRadius: BorderRadius.circular(32),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.darkGreen, size: 28),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.black54, size: 28),
+            const Icon(Icons.chevron_right, color: Colors.black87, size: 24),
           ],
         ),
       ),

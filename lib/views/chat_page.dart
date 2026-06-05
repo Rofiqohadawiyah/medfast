@@ -345,7 +345,6 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-    final myIdStr = user?.uid ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
@@ -393,7 +392,7 @@ class _ChatPageState extends State<ChatPage> {
                           final senderRole = pengirimMap?['role']?.toString().toLowerCase() ?? 'pelanggan';
                           
                           // Tentukan sisi balon chat: kanan (hijau) atau kiri (putih)
-                          final myRole = user?.role?.toLowerCase() ?? 'pelanggan';
+                          final myRole = user?.role.toLowerCase() ?? 'pelanggan';
                           bool isOnRightSide = false;
                           if (myRole == 'admin') {
                             isOnRightSide = (senderRole == 'admin');

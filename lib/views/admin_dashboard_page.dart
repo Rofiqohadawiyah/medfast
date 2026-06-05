@@ -72,7 +72,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           // Header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 56, left: 24, right: 24, bottom: 28),
+            padding: const EdgeInsets.only(
+              top: 56,
+              left: 24,
+              right: 24,
+              bottom: 28,
+            ),
             decoration: const BoxDecoration(
               color: AppColors.darkGreen,
               borderRadius: BorderRadius.only(
@@ -85,9 +90,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.admin_panel_settings, color: Colors.white70, size: 18),
+                    const Icon(
+                      Icons.admin_panel_settings,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
-                    const Text('Admin Panel', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const Text(
+                      'Admin Panel',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
                     const Spacer(),
                     GestureDetector(
                       onTap: () async {
@@ -95,19 +107,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         if (context.mounted) {
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (_) => const WelcomePage()),
+                            MaterialPageRoute(
+                              builder: (_) => const WelcomePage(),
+                            ),
                             (route) => false,
                           );
                         }
                       },
-                      child: const Icon(Icons.logout, color: Colors.white70, size: 22),
+                      child: const Icon(
+                        Icons.logout,
+                        color: Colors.white70,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text(
                   'Halo, ${user?.name ?? 'Admin'}! 👋',
-                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Text(
                   'Kelola produk apotek kamu di sini.',
@@ -125,16 +147,30 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Daftar Produk', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Daftar Produk',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.darkGreen,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     elevation: 0,
                   ),
                   icon: const Icon(Icons.add, color: Colors.white, size: 18),
-                  label: const Text('Tambah', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Tambah',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   onPressed: () => _showTambahProdukSheet(context),
                 ),
               ],
@@ -156,20 +192,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 48,
+                          ),
                           const SizedBox(height: 16),
-                          Text('Terjadi kesalahan: ${snapshot.error}', textAlign: TextAlign.center),
+                          Text(
+                            'Terjadi kesalahan: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                          ),
                         ],
                       ),
                     ),
                   );
                 }
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: AppColors.darkGreen));
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.darkGreen,
+                    ),
+                  );
                 }
 
                 if (snapshot.data == null || snapshot.data!.statusCode != 200) {
-                  return const Center(child: Text('Gagal memuat produk dari server lokal'));
+                  return const Center(
+                    child: Text('Gagal memuat produk dari server lokal'),
+                  );
                 }
 
                 final List<dynamic> docs = jsonDecode(snapshot.data!.body);
@@ -178,10 +227,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.inventory_2_outlined, size: 64, color: Colors.black26),
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 64,
+                          color: Colors.black26,
+                        ),
                         SizedBox(height: 12),
-                        Text('Belum ada produk.', style: TextStyle(color: Colors.black38, fontSize: 16)),
-                        Text('Tap tombol Tambah untuk mulai.', style: TextStyle(color: Colors.black26, fontSize: 13)),
+                        Text(
+                          'Belum ada produk.',
+                          style: TextStyle(color: Colors.black38, fontSize: 16),
+                        ),
+                        Text(
+                          'Tap tombol Tambah untuk mulai.',
+                          style: TextStyle(color: Colors.black26, fontSize: 13),
+                        ),
                       ],
                     ),
                   );
@@ -197,9 +256,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
                       final data = docs[i] as Map<String, dynamic>;
-                      final docId = (data['id_obat'] ?? data['id'] ?? '').toString();
+                      final docId = (data['id_obat'] ?? data['id'] ?? '')
+                          .toString();
                       return _ProductCard(
-                        docId: docId, 
+                        docId: docId,
                         data: data,
                         onRefresh: _triggerRefresh,
                       );
@@ -230,21 +290,33 @@ class _ProductCard extends StatelessWidget {
   final String docId;
   final Map<String, dynamic> data;
   final VoidCallback onRefresh;
-  const _ProductCard({required this.docId, required this.data, required this.onRefresh});
+  const _ProductCard({
+    required this.docId,
+    required this.data,
+    required this.onRefresh,
+  });
 
   Future<void> _hapus(BuildContext context) async {
     final konfirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Hapus Produk?'),
-        content: Text('Yakin ingin menghapus "${data['nama_obat'] ?? data['name'] ?? 'obat'}"?'),
+        content: Text(
+          'Yakin ingin menghapus "${data['nama_obat'] ?? data['name'] ?? 'obat'}"?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
-    
+
     if (konfirm == true) {
       try {
         final authService = AuthService();
@@ -259,13 +331,15 @@ class _ProductCard extends StatelessWidget {
             onRefresh();
           }
         } else {
-          throw Exception(jsonDecode(response.body)['message'] ?? 'Gagal menghapus produk');
+          throw Exception(
+            jsonDecode(response.body)['message'] ?? 'Gagal menghapus produk',
+          );
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menghapus produk: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Gagal menghapus produk: $e')));
         }
       }
     }
@@ -276,7 +350,11 @@ class _ProductCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _TambahProdukSheet(docId: docId, existingData: data, onRefresh: onRefresh),
+      builder: (_) => _TambahProdukSheet(
+        docId: docId,
+        existingData: data,
+        onRefresh: onRefresh,
+      ),
     );
   }
 
@@ -294,7 +372,13 @@ class _ProductCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -307,7 +391,8 @@ class _ProductCard extends StatelessWidget {
               height: 64,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
-                width: 64, height: 64,
+                width: 64,
+                height: 64,
                 color: AppColors.lightGreen,
                 child: const Icon(Icons.medication, color: AppColors.darkGreen),
               ),
@@ -319,25 +404,62 @@ class _ProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text('Rp $price', style: const TextStyle(color: Color(0xFF4299E1), fontWeight: FontWeight.w600)),
+                    Text(
+                      'Rp $price',
+                      style: const TextStyle(
+                        color: Color(0xFF4299E1),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     if (stock != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.lightGreen, borderRadius: BorderRadius.circular(6)),
-                        child: Text('Stok: $stock', style: const TextStyle(fontSize: 10, color: AppColors.darkGreen, fontWeight: FontWeight.bold)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.lightGreen,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Stok: $stock',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.darkGreen,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 if (category != null && category.toString().isNotEmpty)
-                  Text(category, style: const TextStyle(color: AppColors.darkGreen, fontSize: 11, fontWeight: FontWeight.w500)),
+                  Text(
+                    category,
+                    style: const TextStyle(
+                      color: AppColors.darkGreen,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 if (description != null)
-                  Text(description, style: const TextStyle(color: Colors.black45, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    description,
+                    style: const TextStyle(color: Colors.black45, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),
@@ -345,11 +467,19 @@ class _ProductCard extends StatelessWidget {
           Column(
             children: [
               IconButton(
-                icon: const Icon(Icons.edit_outlined, color: AppColors.darkGreen, size: 20),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: AppColors.darkGreen,
+                  size: 20,
+                ),
                 onPressed: () => _edit(context),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
                 onPressed: () => _hapus(context),
               ),
             ],
@@ -398,15 +528,22 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _priceCtrl.dispose(); _imageCtrl.dispose(); _descCtrl.dispose();
-    _categoryCtrl.dispose(); _stockCtrl.dispose();
+    _nameCtrl.dispose();
+    _priceCtrl.dispose();
+    _imageCtrl.dispose();
+    _descCtrl.dispose();
+    _categoryCtrl.dispose();
+    _stockCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _pilihGambar() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-    
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
     if (pickedFile != null) {
       final bytes = await pickedFile.readAsBytes();
       setState(() {
@@ -417,22 +554,19 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
 
   Future<void> _simpan() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _loading = true);
 
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final user = auth.userModel;
-      
+
       if (user == null) {
         throw Exception("Sesi login berakhir. Silakan login kembali.");
       }
 
       final authService = AuthService();
       final token = await authService.token;
-
-      // URL gambar default
-      String imageUrl = _imageCtrl.text.trim();
 
       // Payload data fields
       final fields = <String, String>{
@@ -450,7 +584,9 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
         endpoint: endpoint,
         fields: fields,
         imageBytes: _imageBytes,
-        filename: _imageBytes != null ? 'product_${DateTime.now().millisecondsSinceEpoch}.jpg' : null,
+        filename: _imageBytes != null
+            ? 'product_${DateTime.now().millisecondsSinceEpoch}.jpg'
+            : null,
         token: token,
       );
 
@@ -458,27 +594,77 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        final newObat = responseData['data'];
-        final newObatId = (newObat?['id_obat'] ?? newObat?['id'] ?? '').toString();
+        final dynamic dataBlock = responseData['data'];
+        String newObatId = '';
+        if (dataBlock != null && dataBlock is Map) {
+          newObatId = (dataBlock['id_obat'] ?? dataBlock['id'] ?? '')
+              .toString();
+        }
+        if (newObatId.isEmpty) {
+          newObatId = (responseData['id_obat'] ?? responseData['id'] ?? '')
+              .toString();
+        }
+        if (newObatId.isEmpty && _isEdit) {
+          newObatId = widget.docId ?? '';
+        }
 
         // Menyimpan / memperbarui stok obat jika diinput
         final stockStr = _stockCtrl.text.trim();
-        if (stockStr.isNotEmpty && user.pharmacyId != null && newObatId.isNotEmpty) {
+        if (stockStr.isNotEmpty &&
+            user.pharmacyId != null &&
+            newObatId.isNotEmpty) {
           final stockVal = int.tryParse(stockStr) ?? 0;
           final apotekId = int.tryParse(user.pharmacyId!) ?? 0;
-          if (apotekId > 0 && stockVal > 0) {
-            // Panggil API POST /api/stok-obat untuk membuat/update stok
-            await ApiClient.post('/stok-obat', {
-              'id_apotek': apotekId,
-              'id_obat': int.parse(newObatId),
-              'jumlah_stok': stockVal,
-            });
+          final parsedObatId = int.tryParse(newObatId);
+          if (apotekId > 0 && parsedObatId != null && parsedObatId > 0) {
+            // Since this page loads from global /obat, we check if there's an existing stock for this apotek and obat.
+            // But we don't have id_stok directly, so let's try to query it first.
+            int? existingStockId;
+            try {
+              final stockCheckRes = await ApiClient.get(
+                '/stok-obat?id_apotek=$apotekId',
+                token: token,
+              );
+              if (stockCheckRes.statusCode == 200) {
+                final List<dynamic> stockList = jsonDecode(stockCheckRes.body);
+                final matched = stockList.firstWhere(
+                  (s) =>
+                      (s['id_obat']?.toString() == newObatId ||
+                      (s['obat']?['id_obat']?.toString() == newObatId)),
+                  orElse: () => null,
+                );
+                if (matched != null) {
+                  existingStockId = int.tryParse(
+                    matched['id_stok']?.toString() ?? '',
+                  );
+                }
+              }
+            } catch (_) {}
+
+            if (existingStockId != null) {
+              await ApiClient.put('/stok-obat/$existingStockId', {
+                'stok': stockVal,
+              }, token: token);
+            } else {
+              // Panggil API POST /api/stok-obat untuk membuat/update stok
+              await ApiClient.post('/stok-obat', {
+                'id_apotek': apotekId,
+                'id_obat': parsedObatId,
+                'stok': stockVal,
+              }, token: token);
+            }
           }
         }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(_isEdit ? 'Produk berhasil diperbarui!' : 'Produk berhasil ditambahkan!')),
+            SnackBar(
+              content: Text(
+                _isEdit
+                    ? 'Produk berhasil diperbarui!'
+                    : 'Produk berhasil ditambahkan!',
+              ),
+            ),
           );
           Navigator.pop(context);
           if (widget.onRefresh != null) {
@@ -486,7 +672,8 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
           }
         }
       } else {
-        final errorMsg = jsonDecode(response.body)['message'] ?? 'Gagal menyimpan produk';
+        final errorMsg =
+            jsonDecode(response.body)['message'] ?? 'Gagal menyimpan produk';
         throw Exception(errorMsg);
       }
     } catch (e) {
@@ -509,10 +696,13 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final existingImg = widget.existingData?['gambar'] ?? widget.existingData?['imageUrl'];
+    final existingImg =
+        widget.existingData?['gambar'] ?? widget.existingData?['imageUrl'];
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -527,26 +717,61 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Handle bar
-                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(4)))),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 16),
-                Text(_isEdit ? 'Edit Produk' : 'Tambah Produk Baru',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(
+                  _isEdit ? 'Edit Produk' : 'Tambah Produk Baru',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 _field('Nama Produk', _nameCtrl, Icons.medication_outlined),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _field('Harga (Rp)', _priceCtrl, Icons.attach_money, keyboard: TextInputType.number)),
+                    Expanded(
+                      child: _field(
+                        'Harga (Rp)',
+                        _priceCtrl,
+                        Icons.attach_money,
+                        keyboard: TextInputType.number,
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: _field('Stok', _stockCtrl, Icons.inventory_2_outlined, keyboard: TextInputType.number)),
+                    Expanded(
+                      child: _field(
+                        'Stok',
+                        _stockCtrl,
+                        Icons.inventory_2_outlined,
+                        keyboard: TextInputType.number,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 _field('Kategori', _categoryCtrl, Icons.category_outlined),
                 const SizedBox(height: 20),
-                
+
                 // Image Picker Area
-                const Text('Foto Produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black54)),
+                const Text(
+                  'Foto Produk',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 GestureDetector(
                   onTap: _pilihGambar,
@@ -556,33 +781,64 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                     decoration: BoxDecoration(
                       color: AppColors.lightGreen.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.darkGreen.withOpacity(0.3), width: 1),
+                      border: Border.all(
+                        color: AppColors.darkGreen.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                     child: _imageBytes != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(14),
-                            child: Image.memory(_imageBytes!, fit: BoxFit.cover),
+                            child: Image.memory(
+                              _imageBytes!,
+                              fit: BoxFit.cover,
+                            ),
                           )
-                        : existingImg != null && existingImg.toString().isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: Image.network(existingImg, fit: BoxFit.cover),
-                              )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(Icons.add_a_photo_outlined, color: AppColors.darkGreen, size: 32),
-                                  SizedBox(height: 8),
-                                  Text('Tap untuk pilih foto dari galeri', style: TextStyle(color: AppColors.darkGreen, fontSize: 13)),
-                                ],
+                        : existingImg != null &&
+                              existingImg.toString().isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.network(
+                              existingImg,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(
+                                Icons.add_a_photo_outlined,
+                                color: AppColors.darkGreen,
+                                size: 32,
                               ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Tap untuk pilih foto dari galeri',
+                                style: TextStyle(
+                                  color: AppColors.darkGreen,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                
-                _field('Atau gunakan URL Gambar', _imageCtrl, Icons.link_outlined, required: false),
+
+                _field(
+                  'Atau gunakan URL Gambar',
+                  _imageCtrl,
+                  Icons.link_outlined,
+                  required: false,
+                ),
                 const SizedBox(height: 12),
-                _field('Deskripsi', _descCtrl, Icons.description_outlined, required: false, maxLines: 3),
+                _field(
+                  'Deskripsi',
+                  _descCtrl,
+                  Icons.description_outlined,
+                  required: false,
+                  maxLines: 3,
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -590,14 +846,29 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.darkGreen,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
                     onPressed: _loading ? null : _simpan,
                     child: _loading
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(_isEdit ? 'Simpan Perubahan' : 'Tambah Produk',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            _isEdit ? 'Simpan Perubahan' : 'Tambah Produk',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -608,19 +879,32 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, IconData icon,
-      {TextInputType? keyboard, bool required = true, int maxLines = 1}) {
+  Widget _field(
+    String label,
+    TextEditingController ctrl,
+    IconData icon, {
+    TextInputType? keyboard,
+    bool required = true,
+    int maxLines = 1,
+  }) {
     return TextFormField(
       controller: ctrl,
       keyboardType: keyboard,
       maxLines: maxLines,
-      validator: required ? (v) => (v == null || v.trim().isEmpty) ? '$label tidak boleh kosong' : null : null,
+      validator: required
+          ? (v) => (v == null || v.trim().isEmpty)
+                ? '$label tidak boleh kosong'
+                : null
+          : null,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: AppColors.darkGreen),
         filled: true,
         fillColor: AppColors.lightGreen.withOpacity(0.5),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.darkGreen, width: 1.5),

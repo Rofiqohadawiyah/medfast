@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -23,6 +22,7 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
   int _pesananSelesai = 0;
   double _totalPendapatan = 0;
   bool _loading = true;
+  List<dynamic> _latestPesanan = [];
 
   @override
   void initState() {
@@ -63,6 +63,16 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
             ? allPesanan.where((p) => p['id_apotek']?.toString() == apotekId).toList()
             : allPesanan;
 
+        // Sort descending by id or created_at for recent orders
+        pesanan.sort((a, b) {
+          final idA = a['id_pesanan'] ?? a['id'] ?? 0;
+          final idB = b['id_pesanan'] ?? b['id'] ?? 0;
+          if (idA is int && idB is int) return idB.compareTo(idA);
+          return 0;
+        });
+
+        final latestPesanan = pesanan.take(3).toList();
+
         for (var p in pesanan) {
           final rawStatus = (p['status_pesanan'] ?? p['status'] ?? '').toString().toLowerCase();
           final status = rawStatus == 'pending' ? 'menunggu' : rawStatus;
@@ -73,6 +83,12 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
             selesai++;
             pendapatan += (p['total_harga'] as num? ?? 0).toDouble();
           }
+        }
+
+        if (mounted) {
+          setState(() {
+            _latestPesanan = latestPesanan;
+          });
         }
       }
 
@@ -164,19 +180,19 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                     childAspectRatio: 1.5,
                     children: [
-                      _statCard('Total Produk', '$_totalProduk', Icons.medication_rounded, AppColors.darkGreen),
+                      _statCard('Total Produk', '$_totalProduk', Icons.medical_information_outlined, const Color(0xFF4299E1)),
                       _statCard('Menunggu', '$_pesananPending', Icons.schedule_rounded, Colors.orange),
-                      _statCard('Diproses', '$_pesananDiproses', Icons.local_shipping_rounded, Colors.blueAccent),
-                      _statCard('Selesai', '$_pesananSelesai', Icons.check_circle_rounded, Colors.green),
+                      _statCard('Diproses', '$_pesananDiproses', Icons.local_shipping_outlined, const Color(0xFF64748B)),
+                      _statCard('Selesai', '$_pesananSelesai', Icons.check_circle_outline, Colors.green),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
 
                 // Total Pendapatan
                 Padding(
@@ -185,70 +201,113 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.darkGreen, Color(0xFF2D3748)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: AppColors.darkGreen,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.account_balance_wallet_rounded, color: Colors.white70, size: 32),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                          child: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 28),
+                        ),
                         const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Total Pendapatan', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                            Text(
-                              'Rp ${_totalPendapatan.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
-                              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Total Pendapatan', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                              Text(
+                                'Rp ${_totalPendapatan.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+                                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                          child: const Icon(Icons.chevron_right, color: Colors.white, size: 20),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // ─── Menu Cepat ─────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: const Align(
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Menu Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: Text('Menu Cepat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _quickMenu(context, Icons.receipt_long_rounded, AppColors.darkGreen, 'Pesanan', () {
+                      _quickMenu(context, Icons.receipt_long_outlined, 'Pesanan', () {
                         final shell = context.findAncestorStateOfType<AdminMainScreenState>();
                         shell?.setSelectedIndex(1);
                       }),
-                      _quickMenu(context, Icons.medication_rounded, Colors.blueAccent, 'Produk', () {
+                      _quickMenu(context, Icons.medical_services_outlined, 'Produk', () {
                         final shell = context.findAncestorStateOfType<AdminMainScreenState>();
                         shell?.setSelectedIndex(2);
                       }),
-                      _quickMenu(context, Icons.chat_bubble_rounded, const Color(0xFFEE4D2D), 'Chat', () {
+                      _quickMenu(context, Icons.chat_bubble_outline, 'Chat', () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const ChatRoomsPage()),
                         );
                       }),
-                      _quickMenu(context, Icons.person_rounded, Colors.purple, 'Profil', () {
+                      _quickMenu(context, Icons.person_outline, 'Profil', () {
                         final shell = context.findAncestorStateOfType<AdminMainScreenState>();
                         shell?.setSelectedIndex(3);
                       }),
                     ],
                   ),
                 ),
-                const SizedBox(height: 100),
+
+                const SizedBox(height: 24),
+
+                // ─── Pesanan Terbaru ────────────────────────────────
+                if (_latestPesanan.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Pesanan Terbaru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                              GestureDetector(
+                                onTap: () {
+                                  final shell = context.findAncestorStateOfType<AdminMainScreenState>();
+                                  shell?.setSelectedIndex(1);
+                                },
+                                child: const Text('Lihat Semua', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.darkGreen)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          ..._latestPesanan.map((p) => _buildRecentOrderItem(p)).toList(),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 60),
               ],
             ],
           ),
@@ -263,41 +322,100 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 3))],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(label, style: const TextStyle(color: Colors.black45, fontSize: 11)),
-              Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label.replaceFirst(' ', '\n'), 
+                  style: const TextStyle(color: Colors.black54, fontSize: 11, fontWeight: FontWeight.w600, height: 1.2),
+                ),
+              ),
             ],
           ),
+          const Spacer(),
+          Text(value, style: const TextStyle(color: Colors.black87, fontSize: 22, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _quickMenu(BuildContext context, IconData icon, Color color, String label, VoidCallback onTap) {
+  Widget _quickMenu(BuildContext context, IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
           Container(
-            width: 54, height: 54,
-            decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 26),
+            width: 58, height: 58,
+            decoration: const BoxDecoration(color: Color(0xFFEAF0FC), shape: BoxShape.circle),
+            child: Icon(icon, color: Colors.black87, size: 24),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentOrderItem(Map<String, dynamic> data) {
+    final idPesanan = data['id_pesanan'] ?? data['id'] ?? '-';
+    final customerName = data['nama_pembeli'] ?? data['customer_name'] ?? 'Pelanggan';
+    final rawStatus = (data['status_pesanan'] ?? data['status'] ?? '').toString().toUpperCase();
+    final status = rawStatus == 'PENDING' ? 'MENUNGGU' : rawStatus;
+
+    Color bgStatus, textStatus;
+    if (status == 'MENUNGGU') {
+      bgStatus = Colors.orange.shade50;
+      textStatus = Colors.orange;
+    } else if (status == 'DIPROSES') {
+      bgStatus = Colors.blue.shade50;
+      textStatus = Colors.blue;
+    } else if (status == 'SELESAI') {
+      bgStatus = Colors.green.shade50;
+      textStatus = Colors.green;
+    } else {
+      bgStatus = Colors.grey.shade100;
+      textStatus = Colors.grey;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(color: Color(0xFFEAF0FC), shape: BoxShape.circle),
+            child: const Icon(Icons.receipt_long_outlined, color: AppColors.darkGreen, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('#MF-$idPesanan', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text(customerName, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: bgStatus, borderRadius: BorderRadius.circular(20)),
+            child: Text(
+              status,
+              style: TextStyle(color: textStatus, fontSize: 10, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
 import 'register_pages.dart';
+import 'register_admin_page.dart' as admin_page;
 import 'login_page.dart';
 
 class RegisterPage extends StatelessWidget {
@@ -78,7 +79,7 @@ class RegisterPage extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const RegisterAdminPage()),
+                        MaterialPageRoute(builder: (_) => const admin_page.RegisterAdminPage()),
                       );
                     },
                   ),
