@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/payment_service.dart';
 import '../utils/colors.dart';
 import 'chat_page.dart';
+import 'payment_webview_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class PesananPage extends StatefulWidget {
@@ -347,6 +349,47 @@ class _PesananPageState extends State<PesananPage> {
                   ],
                 ),
                 const SizedBox(height: 12),
+
+                // Tombol Bayar Sekarang (jika metode Midtrans & belum bayar)
+                if (pembayaran['metode_pembayaran'] == 'Midtrans' &&
+                    pembayaran['status_pembayaran'] != 'lunas')
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3F5E53),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(context); // tutup bottom sheet
+                        final paymentService = PaymentService();
+                        final snapData = await paymentService.getSnapToken(detail['id_pesanan']);
+                        if (snapData != null && snapData['payment_url'] != null && mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PaymentWebviewPage(
+                                paymentUrl: snapData['payment_url'],
+                                idPesanan: detail['id_pesanan'],
+                                onSuccess: _fetchOrders,
+                                onFailure: _fetchOrders,
+                              ),
+                            ),
+                          );
+                        } else if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Gagal mendapatkan link pembayaran'),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.payment, color: Colors.white),
+                      label: const Text('Bayar Sekarang', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
               ],
             ),
           ),

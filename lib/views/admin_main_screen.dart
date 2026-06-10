@@ -38,40 +38,69 @@ class AdminMainScreenState extends State<AdminMainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.lightGreen,
+      backgroundColor: const Color(0xFFE2EEE9),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: (i) => setState(() => _selectedIndex = i),
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.white,
-              selectedItemColor: AppColors.darkGreen,
-              unselectedItemColor: Colors.black38,
-              elevation: 0,
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home_rounded, size: 28), label: 'Beranda'),
-                BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded, size: 28), label: 'Pesanan'),
-                BottomNavigationBarItem(icon: Icon(Icons.medication_rounded, size: 28), label: 'Produk'),
-                BottomNavigationBarItem(icon: Icon(Icons.person_rounded, size: 28), label: 'Profil'),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Container(
+            height: 76,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Beranda'),
+                _buildNavItem(1, Icons.assignment_outlined, Icons.assignment_rounded, 'Pesanan'),
+                _buildNavItem(2, Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Produk'),
+                _buildNavItem(3, Icons.person_outline, Icons.person_rounded, 'Profil'),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData outlineIcon, IconData filledIcon, String label) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE5F5ED) : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? filledIcon : outlineIcon,
+              color: isSelected ? const Color(0xFF1E3A2F) : Colors.black54,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.black87 : Colors.black38,
+                fontSize: 9,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
       ),
     );

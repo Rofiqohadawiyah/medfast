@@ -347,27 +347,71 @@ class _ChatPageState extends State<ChatPage> {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F5F8),
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.roomName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
-            const Text('Online', style: TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
-        backgroundColor: AppColors.darkGreen,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: const Color(0xFFF8F9FB), // Light grey/blue background from design
       body: Column(
         children: [
-          // Chat messages
+          // Forest green curved header
+          Container(
+            height: 120,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Color(0xFF3F5E53),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+            ),
+            padding: const EdgeInsets.only(top: 40, left: 12, right: 16),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.roomName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF50D199),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Online',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Chat messages area
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF3F5E53)))
                 : _messages.isEmpty
                     ? Center(
                         child: Column(
@@ -381,26 +425,17 @@ class _ChatPageState extends State<ChatPage> {
                       )
                     : ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final msg = _messages[index];
                           final text = msg['pesan'] ?? '';
                           final timeStr = _formatTime(msg['waktu_kirim']);
 
-                          final pengirimMap = msg['pengirim'] as Map<String, dynamic>?;
-                          final senderRole = pengirimMap?['role']?.toString().toLowerCase() ?? 'pelanggan';
-                          
-                          // Tentukan sisi balon chat: kanan (hijau) atau kiri (putih)
-                          final myRole = user?.role.toLowerCase() ?? 'pelanggan';
-                          bool isOnRightSide = false;
-                          if (myRole == 'admin') {
-                            isOnRightSide = (senderRole == 'admin');
-                          } else {
-                            isOnRightSide = (senderRole == 'pelanggan');
-                          }
+                          final senderId = msg['id_pengirim']?.toString();
+                          final myId = user?.uid;
+                          final bool isOnRightSide = (senderId != null && myId != null && senderId == myId);
 
-                          // Tentukan apakah harus menampilkan header tanggal (per hari)
                           bool showDayHeader = false;
                           String dayHeaderText = '';
                           if (index == 0) {
@@ -422,17 +457,17 @@ class _ChatPageState extends State<ChatPage> {
                               if (showDayHeader && dayHeaderText.isNotEmpty)
                                 Center(
                                   child: Container(
-                                    margin: const EdgeInsets.symmetric(vertical: 12),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    margin: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.06),
-                                      borderRadius: BorderRadius.circular(10),
+                                      color: const Color(0xFFEAF0F6), // Light blueish/grey pill
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Text(
                                       dayHeaderText,
                                       style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.black54,
+                                        fontSize: 12,
+                                        color: Colors.black45,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -447,42 +482,66 @@ class _ChatPageState extends State<ChatPage> {
 
           // Message input bar
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: Colors.white,
             child: SafeArea(
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.image, color: AppColors.darkGreen),
-                    onPressed: () => _showImageSourceActionSheet(context),
-                  ),
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF2F5F8),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.black.withOpacity(0.08), width: 1.0),
                       ),
-                      child: TextField(
-                        controller: _msgController,
-                        decoration: const InputDecoration(
-                          hintText: 'Tulis pesan...',
-                          border: InputBorder.none,
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.image_outlined, color: Colors.black38, size: 24),
+                            onPressed: () => _showImageSourceActionSheet(context),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _msgController,
+                              style: const TextStyle(fontSize: 15, color: Color(0xFF1E3A2F)),
+                              decoration: const InputDecoration(
+                                hintText: 'Tulis pesan...',
+                                hintStyle: TextStyle(color: Colors.black26, fontSize: 15),
+                                border: InputBorder.none,
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   GestureDetector(
                     onTap: _sendMessage,
                     child: Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: const BoxDecoration(
-                        color: AppColors.darkGreen,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FB),
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black.withOpacity(0.05), width: 1.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
                       ),
-                      child: const Icon(Icons.send, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.send,
+                        color: Color(0xFF3F5E53),
+                        size: 20,
+                      ),
                     ),
                   ),
                 ],
@@ -495,71 +554,89 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildChatBubble(String text, bool isOnRightSide, String time) {
+    final bool isImage = _isImageUrl(text);
     return Align(
       alignment: isOnRightSide ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: isOnRightSide ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 4, bottom: 2),
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isOnRightSide ? AppColors.darkGreen : Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: isOnRightSide ? const Radius.circular(20) : const Radius.circular(0),
-                bottomRight: isOnRightSide ? const Radius.circular(0) : const Radius.circular(20),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        child: Column(
+          crossAxisAlignment: isOnRightSide ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isOnRightSide ? const Color(0xFF3F5E53) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: isOnRightSide
+                    ? null
+                    : Border.all(color: Colors.black.withOpacity(0.05), width: 1.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                )
-              ],
-            ),
-            child: _isImageUrl(text)
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
+              child: isImage
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        text,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const SizedBox(
+                            width: 150,
+                            height: 150,
+                            child: Center(
+                              child: CircularProgressIndicator(color: Color(0xFF3F5E53)),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.broken_image,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    )
+                  : Text(
                       text,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const SizedBox(
-                          width: 150,
-                          height: 150,
-                          child: Center(
-                            child: CircularProgressIndicator(color: AppColors.darkGreen),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.broken_image,
-                        size: 50,
-                        color: Colors.grey,
+                      style: TextStyle(
+                        color: isOnRightSide ? Colors.white : const Color(0xFF1E3A2F),
+                        fontSize: 15,
+                        height: 1.4,
                       ),
                     ),
-                  )
-                : Text(
-                    text,
-                    style: TextStyle(
-                      color: isOnRightSide ? Colors.white : Colors.black87,
-                      fontSize: 15,
-                      height: 1.4,
-                    ),
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
-            child: Text(
-              time,
-              style: const TextStyle(fontSize: 10, color: Colors.black38),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: isOnRightSide
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          time,
+                          style: const TextStyle(fontSize: 11, color: Colors.black38),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.done_all,
+                          size: 14,
+                          color: Color(0xFF3F5E53),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      time,
+                      style: const TextStyle(fontSize: 11, color: Colors.black38),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -594,7 +671,7 @@ class _ChatPageState extends State<ChatPage> {
       final msgDay = DateTime(date.year, date.month, date.day);
 
       if (msgDay == today) {
-        return 'Hari ini';
+        return 'Hari Ini';
       } else if (msgDay == yesterday) {
         return 'Kemarin';
       } else {

@@ -11,6 +11,8 @@ import '../utils/colors.dart';
 import 'alamat_saya_page.dart';
 import 'main_screen.dart';
 import 'apotek_detail_page.dart';
+import '../services/payment_service.dart';
+import 'payment_webview_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -713,14 +715,47 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         );
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pesanan berhasil dibuat!'), backgroundColor: AppColors.darkGreen),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)),
-            (route) => false,
-          );
+          if (_paymentMethod == 'Midtrans') {
+            final paymentService = PaymentService();
+            final snapData = await paymentService.getSnapToken(idPesanan);
+
+            if (mounted) {
+              if (snapData != null && snapData['payment_url'] != null) {
+                // Close modal and push webview
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PaymentWebviewPage(
+                      paymentUrl: snapData['payment_url'],
+                      idPesanan: idPesanan,
+                    ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Pesanan dibuat! Silakan bayar dari halaman Pesanan.'),
+                    backgroundColor: AppColors.darkGreen,
+                  ),
+                );
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)),
+                  (route) => false,
+                );
+              }
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Pesanan berhasil dibuat!'), backgroundColor: AppColors.darkGreen),
+            );
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)),
+              (route) => false,
+            );
+          }
         }
       } else {
         final errorMsg = jsonDecode(pesananRes.body)['message'] ?? 'Gagal membuat pesanan';
@@ -1032,7 +1067,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                       children: [
                         const Text('Metode Pembayaran', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         const SizedBox(height: 12),
-                        Row(
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
                           children: [
                             GestureDetector(
                               onTap: () => setState(() => _paymentMethod = 'COD'),
@@ -1056,26 +1093,33 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+
                             GestureDetector(
-                              onTap: () => setState(() => _paymentMethod = 'Transfer Bank'),
+                              onTap: () => setState(() => _paymentMethod = 'Midtrans'),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: _paymentMethod == 'Transfer Bank' ? AppColors.lightGreen.withOpacity(0.4) : Colors.white,
+                                  color: _paymentMethod == 'Midtrans' ? const Color(0xFFDFECE7) : Colors.white,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: _paymentMethod == 'Transfer Bank' ? AppColors.darkGreen : Colors.grey[300]!,
+                                    color: _paymentMethod == 'Midtrans' ? AppColors.darkGreen : Colors.grey[300]!,
                                     width: 1.5,
                                   ),
                                 ),
-                                child: Text(
-                                  'Transfer Bank',
-                                  style: TextStyle(
-                                    color: _paymentMethod == 'Transfer Bank' ? AppColors.darkGreen : Colors.black87,
-                                    fontWeight: _paymentMethod == 'Transfer Bank' ? FontWeight.bold : FontWeight.normal,
-                                    fontSize: 13,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.payment, size: 14, color: _paymentMethod == 'Midtrans' ? AppColors.darkGreen : Colors.black87),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Bayar Online',
+                                      style: TextStyle(
+                                        color: _paymentMethod == 'Midtrans' ? AppColors.darkGreen : Colors.black87,
+                                        fontWeight: _paymentMethod == 'Midtrans' ? FontWeight.bold : FontWeight.normal,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

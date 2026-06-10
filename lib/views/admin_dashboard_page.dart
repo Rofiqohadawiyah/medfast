@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../utils/colors.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'dart:ui';
 import 'welcome_page.dart';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -694,222 +695,786 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final existingImg =
-        widget.existingData?['gambar'] ?? widget.existingData?['imageUrl'];
-
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+  Widget _buildPhotoPicker() {
+    final existingImg = widget.existingData?['gambar'] ?? widget.existingData?['imageUrl'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'UPLOAD PHOTO OBAT',
+          style: TextStyle(
+            color: Color(0xFF5A5A5A),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle bar
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.black12,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _isEdit ? 'Edit Produk' : 'Tambah Produk Baru',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _field('Nama Produk', _nameCtrl, Icons.medication_outlined),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _field(
-                        'Harga (Rp)',
-                        _priceCtrl,
-                        Icons.attach_money,
-                        keyboard: TextInputType.number,
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: _pilihGambar,
+          child: CustomPaint(
+            painter: DashedRectPainter(
+              color: const Color(0xFFB5C9C0),
+              strokeWidth: 1.5,
+              gap: 4,
+            ),
+            child: Container(
+              width: double.infinity,
+              height: 120,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F9F7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: _imageBytes != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.memory(
+                        _imageBytes!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: 120,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _field(
-                        'Stok',
-                        _stockCtrl,
-                        Icons.inventory_2_outlined,
-                        keyboard: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _field('Kategori', _categoryCtrl, Icons.category_outlined),
-                const SizedBox(height: 20),
-
-                // Image Picker Area
-                const Text(
-                  'Foto Produk',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: _pilihGambar,
-                  child: Container(
-                    width: double.infinity,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      color: AppColors.lightGreen.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: AppColors.darkGreen.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: _imageBytes != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.memory(
-                              _imageBytes!,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : existingImg != null &&
-                              existingImg.toString().isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.network(
-                              existingImg,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(
-                                Icons.add_a_photo_outlined,
-                                color: AppColors.darkGreen,
-                                size: 32,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Tap untuk pilih foto dari galeri',
-                                style: TextStyle(
-                                  color: AppColors.darkGreen,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
+                    )
+                  : existingImg != null && existingImg.toString().isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            existingImg.toString(),
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 120,
                           ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                _field(
-                  'Atau gunakan URL Gambar',
-                  _imageCtrl,
-                  Icons.link_outlined,
-                  required: false,
-                ),
-                const SizedBox(height: 12),
-                _field(
-                  'Deskripsi',
-                  _descCtrl,
-                  Icons.description_outlined,
-                  required: false,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.darkGreen,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: _loading ? null : _simpan,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                        )
+                      : const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_a_photo_outlined,
+                              color: Color(0xFF3F5E53),
+                              size: 32,
                             ),
-                          )
-                        : Text(
-                            _isEdit ? 'Simpan Perubahan' : 'Tambah Produk',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                            SizedBox(height: 8),
+                            Text(
+                              'Ketuk untuk pilih foto',
+                              style: TextStyle(
+                                color: Color(0xFF5A5A5A),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                  ),
-                ),
-              ],
+                            SizedBox(height: 2),
+                            Text(
+                              'JPG atau PNG, maks 2MB',
+                              style: TextStyle(
+                                color: Colors.black38,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildEditPhotoPicker() {
+    final existingImg = widget.existingData?['gambar'] ?? widget.existingData?['imageUrl'];
+    return Center(
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                onTap: _pilihGambar,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F7F6),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFD0DDD7), width: 1.5),
+                  ),
+                  child: _imageBytes != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Image.memory(
+                            _imageBytes!,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : existingImg != null && existingImg.toString().isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: Image.network(
+                                existingImg.toString(),
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.image_outlined,
+                              color: Colors.black26,
+                              size: 40,
+                            ),
+                ),
+              ),
+              Positioned(
+                bottom: -4,
+                right: -4,
+                child: GestureDetector(
+                  onTap: _pilihGambar,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF3F5E53),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Ubah Foto Obat',
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _field(
-    String label,
-    TextEditingController ctrl,
-    IconData icon, {
+  Widget _customField({
+    required String label,
+    required TextEditingController ctrl,
     TextInputType? keyboard,
     bool required = true,
     int maxLines = 1,
+    String? prefixText,
+    String? hintText,
   }) {
-    return TextFormField(
-      controller: ctrl,
-      keyboardType: keyboard,
-      maxLines: maxLines,
-      validator: required
-          ? (v) => (v == null || v.trim().isEmpty)
-                ? '$label tidak boleh kosong'
-                : null
-          : null,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.darkGreen),
-        filled: true,
-        fillColor: AppColors.lightGreen.withOpacity(0.5),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF5A5A5A),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.darkGreen, width: 1.5),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: ctrl,
+          keyboardType: keyboard,
+          maxLines: maxLines,
+          validator: required ? (v) => (v == null || v.trim().isEmpty) ? 'Tidak boleh kosong' : null : null,
+          style: const TextStyle(
+            color: Color(0xFF1E3A2F),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: const TextStyle(
+              color: Colors.black26,
+              fontSize: 15,
+              fontWeight: FontWeight.normal,
+            ),
+            prefixText: prefixText,
+            prefixStyle: const TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF4F7F6),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF3F5E53), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _dropdownField({
+    required String label,
+    required TextEditingController ctrl,
+    required List<String> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF5A5A5A),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: items.contains(ctrl.text) ? ctrl.text : (items.isNotEmpty ? items.first : null),
+          items: items.map((e) {
+            return DropdownMenuItem<String>(
+              value: e,
+              child: Text(
+                e,
+                style: const TextStyle(
+                  color: Color(0xFF1E3A2F),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) ctrl.text = val;
+          },
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFF4F7F6),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF3F5E53), width: 1.5),
+            ),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
+        ),
+      ],
+    );
+  }
+
+  Widget _editField({
+    required String label,
+    required TextEditingController ctrl,
+    required IconData icon,
+    TextInputType? keyboard,
+    bool required = true,
+    int maxLines = 1,
+    String? hintText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.black54, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.black54,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: ctrl,
+          keyboardType: keyboard,
+          maxLines: maxLines,
+          validator: required ? (v) => (v == null || v.trim().isEmpty) ? 'Tidak boleh kosong' : null : null,
+          style: const TextStyle(
+            color: Color(0xFF1E3A2F),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: const TextStyle(
+              color: Colors.black26,
+              fontSize: 15,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF4F7F6),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF3F5E53), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _editDropdownField({
+    required String label,
+    required TextEditingController ctrl,
+    required IconData icon,
+    required List<String> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.black54, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.black54,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: items.contains(ctrl.text) ? ctrl.text : (items.isNotEmpty ? items.first : null),
+          items: items.map((e) {
+            return DropdownMenuItem<String>(
+              value: e,
+              child: Text(
+                e,
+                style: const TextStyle(
+                  color: Color(0xFF1E3A2F),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) ctrl.text = val;
+          },
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFF4F7F6),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD0DDD7), width: 1.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF3F5E53), width: 1.5),
+            ),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _hapusObat() async {
+    final konfirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Hapus Produk?'),
+        content: Text(
+          'Yakin ingin menghapus "${widget.existingData?['nama_obat'] ?? widget.existingData?['name'] ?? 'obat'}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (konfirm == true) {
+      setState(() => _loading = true);
+      try {
+        final authService = AuthService();
+        final token = await authService.token;
+
+        final response = await ApiClient.delete('/obat/${widget.docId}', token: token);
+        if (response.statusCode == 200) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Produk berhasil dihapus')),
+            );
+            Navigator.pop(context); // close bottom sheet
+            if (widget.onRefresh != null) {
+              widget.onRefresh!();
+            }
+          }
+        } else {
+          throw Exception(
+            jsonDecode(response.body)['message'] ?? 'Gagal menghapus produk',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal menghapus produk: $e')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _loading = false);
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.92,
+        decoration: const BoxDecoration(
+          color: Color(0xFFDFECE7), // Light green background from page
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Stack(
+          children: [
+            // Dark Green Header
+            Container(
+              height: 140,
+              decoration: const BoxDecoration(
+                color: Color(0xFF3F5E53), // Forest green/teal header
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 24),
+                      Text(
+                        _isEdit ? 'Edit Data Obat' : 'Tambah Obat Baru',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 22),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // White Form Container
+            Positioned(
+              top: 80, // Overlap the header
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_isEdit) ...[
+                            // Edit Mode Photo Picker
+                            _buildEditPhotoPicker(),
+                            const SizedBox(height: 20),
+                            _editField(
+                              label: 'Nama Obat',
+                              ctrl: _nameCtrl,
+                              icon: Icons.bookmark_outline,
+                              hintText: 'Paracetamol 500mg',
+                            ),
+                            const SizedBox(height: 20),
+                            _editDropdownField(
+                              label: 'Kategori',
+                              ctrl: _categoryCtrl,
+                              icon: Icons.category_outlined,
+                              items: const ['Analgesik', 'Antibiotik', 'Suplemen', 'Batuk & Flu', 'Umum'],
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _editField(
+                                    label: 'Harga (Rp)',
+                                    ctrl: _priceCtrl,
+                                    icon: Icons.payment,
+                                    keyboard: TextInputType.number,
+                                    hintText: '5.000',
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _editField(
+                                    label: 'Stok',
+                                    ctrl: _stockCtrl,
+                                    icon: Icons.inventory_2_outlined,
+                                    keyboard: TextInputType.number,
+                                    required: false,
+                                    hintText: '128',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            _editField(
+                              label: 'Deskripsi',
+                              ctrl: _descCtrl,
+                              icon: Icons.description_outlined,
+                              required: false,
+                              maxLines: 4,
+                              hintText: 'Digunakan untuk meredakan nyeri...',
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            // Submit Button Edit Mode
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3F5E53),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                onPressed: _loading ? null : _simpan,
+                                child: _loading
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.save_outlined, color: Colors.white, size: 20),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Simpan Perubahan',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            Center(
+                              child: TextButton(
+                                onPressed: _hapusObat,
+                                child: const Text(
+                                  'Hapus Obat',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            // Add Mode (Dashed upload photo and vertical layout)
+                            _buildPhotoPicker(),
+                            const SizedBox(height: 20),
+                            _customField(
+                              label: 'NAMA OBAT',
+                              ctrl: _nameCtrl,
+                              hintText: 'Paracetamol 500mg',
+                            ),
+                            const SizedBox(height: 20),
+                            _dropdownField(
+                              label: 'KATEGORI',
+                              ctrl: _categoryCtrl,
+                              items: const ['Analgesik', 'Antibiotik', 'Suplemen', 'Batuk & Flu', 'Umum'],
+                            ),
+                            const SizedBox(height: 20),
+                            _customField(
+                              label: 'HARGA JUAL',
+                              ctrl: _priceCtrl,
+                              keyboard: TextInputType.number,
+                              prefixText: 'Rp  ',
+                              hintText: '5000',
+                            ),
+                            const SizedBox(height: 20),
+                            _customField(
+                              label: 'STOK AWAL',
+                              ctrl: _stockCtrl,
+                              keyboard: TextInputType.number,
+                              required: false,
+                              hintText: '100',
+                            ),
+                            const SizedBox(height: 20),
+                            _customField(
+                              label: 'DESKRIPSI OBAT',
+                              ctrl: _descCtrl,
+                              required: false,
+                              maxLines: 4,
+                              hintText: 'Digunakan untuk meredakan nyeri ringan hingga sedang...',
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            // Submit Button Add Mode
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3F5E53),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                onPressed: _loading ? null : _simpan,
+                                child: _loading
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.save_outlined, color: Colors.white, size: 20),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Simpan Data Obat',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+// ─── Dashed Border Custom Painter ──────────────────────────────────────────
+class DashedRectPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+
+  DashedRectPainter({
+    this.color = Colors.black38,
+    this.strokeWidth = 1.0,
+    this.gap = 4.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Radius.circular(12),
+    );
+
+    final Path path = Path()..addRRect(rrect);
+
+    final double dashWidth = 6.0;
+    final double dashSpace = gap;
+
+    final Path dashedPath = Path();
+    for (final PathMetric metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant DashedRectPainter oldDelegate) => false;
 }

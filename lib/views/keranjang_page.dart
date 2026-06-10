@@ -5,9 +5,11 @@ import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/payment_service.dart';
 import '../utils/colors.dart';
 import 'alamat_saya_page.dart';
 import 'main_screen.dart';
+import 'payment_webview_page.dart';
 
 class KeranjangPage extends StatefulWidget {
   const KeranjangPage({super.key});
@@ -18,7 +20,7 @@ class KeranjangPage extends StatefulWidget {
 
 class _KeranjangPageState extends State<KeranjangPage> {
   bool _isCheckingOut = false;
-  String _paymentMethod = 'COD';
+  String _paymentMethod = 'COD'; // 'COD', 'Transfer', 'Midtrans'
 
   @override
   void initState() {
@@ -111,14 +113,62 @@ class _KeranjangPageState extends State<KeranjangPage> {
         await cartProvider.clearCart();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pesanan berhasil dibuat dari Keranjang!'), backgroundColor: AppColors.darkGreen),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)), // Pindah ke tab Pesanan
-            (route) => false,
-          );
+          if (_paymentMethod == 'Midtrans') {
+            // Minta snap token lalu buka WebView pembayaran
+            final paymentService = PaymentService();
+            final snapData = await paymentService.getSnapToken(idPesanan);
+
+            if (mounted) {
+              if (snapData != null && snapData['payment_url'] != null) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PaymentWebviewPage(
+                      paymentUrl: snapData['payment_url'],
+                      idPesanan: idPesanan,
+                      onSuccess: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)),
+                          (route) => false,
+                        );
+                      },
+                      onFailure: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)),
+                          (route) => false,
+                        );
+                      },
+                    ),
+                  ),
+                  (route) => false,
+                );
+              } else {
+                // Gagal dapat snap token, arahkan ke pesanan biasa
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Pesanan dibuat! Silakan bayar dari halaman Pesanan.'),
+                    backgroundColor: AppColors.darkGreen,
+                  ),
+                );
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)),
+                  (route) => false,
+                );
+              }
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Pesanan berhasil dibuat!'), backgroundColor: AppColors.darkGreen),
+            );
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 2)),
+              (route) => false,
+            );
+          }
         }
       } else {
         final errorMsg = jsonDecode(pesananRes.body)['message'] ?? 'Gagal memproses pesanan';
@@ -180,10 +230,11 @@ class _KeranjangPageState extends State<KeranjangPage> {
                   style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 8,
                   children: [
                     ChoiceChip(
-                      label: const Text('COD (Bayar di Tempat)'),
+                      label: const Text('COD'),
                       selected: _paymentMethod == 'COD',
                       selectedColor: AppColors.lightGreen,
                       onSelected: (selected) {
@@ -193,20 +244,42 @@ class _KeranjangPageState extends State<KeranjangPage> {
                         }
                       },
                     ),
-                    const SizedBox(width: 12),
                     ChoiceChip(
-                      label: const Text('Transfer Bank'),
-                      selected: _paymentMethod == 'Transfer',
-                      selectedColor: AppColors.lightGreen,
+                      avatar: const Icon(Icons.payment, size: 16),
+                      label: const Text('Bayar Online'),
+                      selected: _paymentMethod == 'Midtrans',
+                      selectedColor: const Color(0xFFDFECE7),
                       onSelected: (selected) {
                         if (selected) {
-                          setModalState(() => _paymentMethod = 'Transfer');
+                          setModalState(() => _paymentMethod = 'Midtrans');
                           setState(() {});
                         }
                       },
                     ),
                   ],
                 ),
+                if (_paymentMethod == 'Midtrans')
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F9F5),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF3F5E53).withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Color(0xFF3F5E53)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Bayar via GoPay, QRIS, Virtual Account, dan lainnya',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF3F5E53)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 const Divider(height: 24),
 
                 // Rincian Pembayaran

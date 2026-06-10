@@ -138,9 +138,15 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
     );
 
     if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registrasi Admin berhasil! Silakan login.'),
+          backgroundColor: Colors.green,
+        ),
+      );
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const AdminMainScreen()),
+        MaterialPageRoute(builder: (_) => const LoginPage()),
         (route) => false,
       );
     } else if (mounted) {

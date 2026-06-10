@@ -488,27 +488,38 @@ class _ApotekPageState extends State<ApotekPage> {
                                           ],
                                         ),
                                         const SizedBox(height: 4),
-                                        Row(
+                                        Wrap(
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          spacing: 8,
+                                          runSpacing: 4,
                                           children: [
-                                            const Icon(Icons.access_time, size: 14, color: Colors.black45),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              jamOperasional,
-                                              style: const TextStyle(fontSize: 13, color: Colors.black54),
-                                            ),
-                                            if (distanceKm != null) ...[
-                                              const SizedBox(width: 12),
-                                              const Icon(Icons.directions_walk, size: 14, color: AppColors.darkGreen),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '${distanceKm.toStringAsFixed(1)} km',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: AppColors.darkGreen,
-                                                  fontWeight: FontWeight.bold,
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.access_time, size: 14, color: Colors.black45),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  jamOperasional,
+                                                  style: const TextStyle(fontSize: 13, color: Colors.black54),
                                                 ),
+                                              ],
+                                            ),
+                                            if (distanceKm != null)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.directions_walk, size: 14, color: AppColors.darkGreen),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${distanceKm.toStringAsFixed(1)} km',
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                      color: AppColors.darkGreen,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
                                           ],
                                         ),
                                       ],
