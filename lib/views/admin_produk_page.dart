@@ -425,8 +425,6 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
     final category = data['kategori'] ?? 'Umum';
     final idObat = data['id_obat'] ?? data['id'] ?? '-';
     final imageUrl = data['gambar'] ?? '';
-    final int stock = ((data['jumlah_stok'] ?? 0) as num).toInt();
-    final bool hasStock = stock > 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -458,15 +456,6 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                 const SizedBox(height: 4),
                 Text('Kategori: $category', style: const TextStyle(color: Colors.black54, fontSize: 10)),
                 Text('ID: MED-${idObat.toString().padLeft(3, '0')}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
-                const SizedBox(height: 2),
-                Text(
-                  hasStock ? 'Stok: $stock' : 'Stok: 0 (kosong)',
-                  style: TextStyle(
-                    color: hasStock ? const Color(0xFF2E7D52) : Colors.grey,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ),
@@ -480,12 +469,8 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                 padding: const EdgeInsets.all(6),
               ),
               IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: hasStock ? Colors.redAccent : Colors.grey,
-                  size: 20,
-                ),
-                onPressed: hasStock ? () => _hapus(data) : null,
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                onPressed: () => _hapus(data),
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(6),
               ),
