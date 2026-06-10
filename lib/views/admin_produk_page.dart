@@ -103,7 +103,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
           'deskripsi': item['deskripsi'] ?? '',
           'gambar': item['gambar'] ?? '',
         };
-      }).toList(); // stok 0 tetap tampil, apotek lain tidak tampil
+      }).toList(); // stok 0 tetap muncul, apotek lain tidak tampil
 
       if (mounted) {
         setState(() {
@@ -425,7 +425,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
     final category = data['kategori'] ?? 'Umum';
     final idObat = data['id_obat'] ?? data['id'] ?? '-';
     final imageUrl = data['gambar'] ?? '';
-    final int stock = (data['jumlah_stok'] ?? 0) as int;
+    final int stock = ((data['jumlah_stok'] ?? 0) as num).toInt();
     final bool hasStock = stock > 0;
 
     return Container(
@@ -442,7 +442,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
             child: Image.network(
               imageUrl,
               width: 56, height: 56, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (context, error, stackTrace) => Container(
                 width: 56, height: 56,
                 color: const Color(0xFFEAF0FC),
                 child: const Icon(Icons.medication, color: AppColors.darkGreen),
@@ -460,9 +460,9 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                 Text('ID: MED-${idObat.toString().padLeft(3, '0')}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
                 const SizedBox(height: 2),
                 Text(
-                  'Stok: $stock${hasStock ? '' : ' (kosong)'}',
+                  hasStock ? 'Stok: $stock' : 'Stok: 0 (kosong)',
                   style: TextStyle(
-                    color: hasStock ? Colors.green : Colors.grey,
+                    color: hasStock ? const Color(0xFF2E7D52) : Colors.grey,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
@@ -535,7 +535,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
   }
 }
 
-// ─── Bottom Sheet Tambah / Edit Produk ───────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Bottom Sheet Tambah / Edit Produk ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 class _ProdukSheet extends StatefulWidget {
   final Map<String, dynamic>? existing;
   final VoidCallback onSaved;
