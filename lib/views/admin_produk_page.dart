@@ -87,20 +87,23 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
         } catch (_) {}
       }
 
-      final list = rawList.map((item) {
+      final list = rawList
+          .where((item) => stokMap.containsKey(item['id_obat'])) // hanya obat apotek ini
+          .map((item) {
         final idObat = item['id_obat'];
         final stokItem = stokMap[idObat];
+        final int stockQty = ((stokItem?['jumlah_stok'] ?? stokItem?['stok'] ?? 0) as num).toInt();
         return <String, dynamic>{
           'id_obat': idObat,
           'id_stok': stokItem?['id_stok'],
           'nama_obat': item['nama_obat'] ?? '',
           'harga': item['harga'] ?? 0,
-          'jumlah_stok': stokItem?['jumlah_stok'] ?? stokItem?['stok'],
+          'jumlah_stok': stockQty,
           'kategori': item['kategori'] ?? '',
           'deskripsi': item['deskripsi'] ?? '',
           'gambar': item['gambar'] ?? '',
         };
-      }).where((item) => item['id_stok'] != null).toList();
+      }).toList(); // stok 0 tetap tampil, apotek lain tidak tampil
 
       if (mounted) {
         setState(() {
@@ -422,6 +425,8 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
     final category = data['kategori'] ?? 'Umum';
     final idObat = data['id_obat'] ?? data['id'] ?? '-';
     final imageUrl = data['gambar'] ?? '';
+    final int stock = (data['jumlah_stok'] ?? 0) as int;
+    final bool hasStock = stock > 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -453,6 +458,15 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                 const SizedBox(height: 4),
                 Text('Kategori: $category', style: const TextStyle(color: Colors.black54, fontSize: 10)),
                 Text('ID: MED-${idObat.toString().padLeft(3, '0')}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
+                const SizedBox(height: 2),
+                Text(
+                  'Stok: $stock${hasStock ? '' : ' (kosong)'}',
+                  style: TextStyle(
+                    color: hasStock ? Colors.green : Colors.grey,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -466,8 +480,12 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                 padding: const EdgeInsets.all(6),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                onPressed: () => _hapus(data),
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: hasStock ? Colors.redAccent : Colors.grey,
+                  size: 20,
+                ),
+                onPressed: hasStock ? () => _hapus(data) : null,
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(6),
               ),
