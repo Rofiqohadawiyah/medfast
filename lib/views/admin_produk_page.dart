@@ -1,155 +1,45 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
+import '../controllers/admin_produk_controller.dart';
 import '../utils/colors.dart';
 
-class AdminProdukPage extends StatefulWidget {
+class AdminProdukPage extends StatelessWidget {
   const AdminProdukPage({super.key});
 
   @override
-  State<AdminProdukPage> createState() => _AdminProdukPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) {
+        final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+        return AdminProdukController()..loadProducts(user?.pharmacyId);
+      },
+      child: const _AdminProdukPageUI(),
+    );
+  }
 }
 
-class _AdminProdukPageState extends State<AdminProdukPage> {
-  List<dynamic> _products = [];
-  List<dynamic> _filtered = [];
-  bool _loading = true;
-  String _search = '';
+class _AdminProdukPageUI extends StatelessWidget {
+  const _AdminProdukPageUI({super.key});
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProducts();
+  void _showForm(BuildContext context, [Map<String, dynamic>? existing]) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ProdukSheet(
+        existing: existing,
+        parentContext: context,
+      ),
+    );
   }
 
-  Future<void> _loadProducts() async {
-    setState(() => _loading = true);
-    try {
-      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-      final apotekId = user?.pharmacyId;
-      final authService = AuthService();
-      final token = await authService.token;
-
-      if (token == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Token tidak ditemukan, silakan login ulang.'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-          setState(() => _loading = false);
-        }
-        return;
-      }
-
-      // Ambil daftar produk dari /obat
-      final res = await ApiClient.get('/obat', token: token);
-      if (res.statusCode != 200) {
-        final errMsg = _tryParseError(res.body);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal memuat produk: $errMsg'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-          setState(() => _loading = false);
-        }
-        return;
-      }
-
-      final rawList = jsonDecode(res.body) as List<dynamic>;
-
-      // Jika admin punya apotek, ambil juga stok untuk di-merge
-      Map<dynamic, Map<String, dynamic>> stokMap = {};
-      if (apotekId != null) {
-        try {
-          final stokRes = await ApiClient.get(
-            '/stok-obat?id_apotek=$apotekId',
-            token: token,
-          );
-          if (stokRes.statusCode == 200) {
-            final stokList = jsonDecode(stokRes.body) as List<dynamic>;
-            for (final item in stokList) {
-              final idObat = item['id_obat'];
-              if (idObat != null) {
-                stokMap[idObat] = item as Map<String, dynamic>;
-              }
-            }
-          }
-        } catch (_) {}
-      }
-
-      final list = rawList
-          .where((item) => stokMap.containsKey(item['id_obat'])) // hanya obat apotek ini
-          .map((item) {
-        final idObat = item['id_obat'];
-        final stokItem = stokMap[idObat];
-        final int stockQty = ((stokItem?['jumlah_stok'] ?? stokItem?['stok'] ?? 0) as num).toInt();
-        return <String, dynamic>{
-          'id_obat': idObat,
-          'id_stok': stokItem?['id_stok'],
-          'nama_obat': item['nama_obat'] ?? '',
-          'harga': item['harga'] ?? 0,
-          'jumlah_stok': stockQty,
-          'kategori': item['kategori'] ?? '',
-          'deskripsi': item['deskripsi'] ?? '',
-          'gambar': item['gambar'] ?? '',
-        };
-      }).toList(); // stok 0 tetap muncul, apotek lain tidak tampil
-
-      if (mounted) {
-        setState(() {
-          _products = list;
-          _filtered = list;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error memuat produk: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-        setState(() => _loading = false);
-      }
-    }
-  }
-
-  String _tryParseError(String body) {
-    try {
-      final decoded = jsonDecode(body);
-      return decoded['message'] ?? body;
-    } catch (_) {
-      return body;
-    }
-  }
-
-  void _filter(String query) {
-    setState(() {
-      _search = query.toLowerCase();
-      _filtered = _products.where((p) {
-        final name = (p['nama_obat'] ?? p['name'] ?? '')
-            .toString()
-            .toLowerCase();
-        return name.contains(_search);
-      }).toList();
-    });
-  }
-
-  Future<void> _hapus(Map<String, dynamic> data) async {
-    final idStok = data['id_stok']?.toString();
-    final idObat = (data['id_obat'] ?? data['id'] ?? '').toString();
-
+  void _hapus(BuildContext context, Map<String, dynamic> data) async {
+    final controller = context.read<AdminProdukController>();
+    final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+    
     final konfirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -158,6 +48,8 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const Icon(Icons.archive_outlined, color: Color(0xFFC02B48), size: 48),
+            const SizedBox(height: 16),
             const Text(
               'Hapus Obat Ini?',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
@@ -165,7 +57,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Anda akan menghapus data\nobat ${data['nama_obat'] ?? 'ini'}.\nTindakan ini tidak dapat\ndibatalkan.',
+              'Apakah Anda yakin ingin menghapus obat "${data['nama_obat'] ?? 'ini'}"?',
               style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
               textAlign: TextAlign.center,
             ),
@@ -206,74 +98,34 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
     );
     if (konfirm != true) return;
 
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-
-      // Langkah 1: Hapus stok-obat dulu (jika ada), agar tidak FK constraint error
-      if (idStok != null && idStok.isNotEmpty) {
-        debugPrint('[_hapus] DELETE /stok-obat/$idStok');
-        await ApiClient.delete('/stok-obat/$idStok', token: token);
-      }
-
-      // Langkah 2: Hapus obat dari tabel utama
-      if (idObat.isNotEmpty) {
-        debugPrint('[_hapus] DELETE /obat/$idObat');
-        final res = await ApiClient.delete('/obat/$idObat', token: token);
-        if (res.statusCode == 200 || res.statusCode == 204) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Produk berhasil dihapus'),
-                backgroundColor: AppColors.darkGreen,
-              ),
-            );
-            _loadProducts();
-          }
-        } else {
-          final errMsg = _tryParseError(res.body);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Gagal hapus [${res.statusCode}]: $errMsg'),
-                backgroundColor: Colors.redAccent,
-              ),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+    final success = await controller.hapusProduk(data);
+    if (success) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menghapus: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+          const SnackBar(content: Text('Produk berhasil dihapus'), backgroundColor: AppColors.darkGreen),
+        );
+        controller.loadProducts(user?.pharmacyId);
+      }
+    } else {
+      if (context.mounted && controller.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(controller.errorMessage!), backgroundColor: Colors.redAccent),
         );
       }
     }
   }
 
-  void _showForm([Map<String, dynamic>? existing]) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ProdukSheet(
-        existing: existing, 
-        onSaved: _loadProducts,
-        onDelete: existing != null ? () {
-          Navigator.pop(context);
-          _hapus(existing);
-        } : null,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final int totalKategori = _products.map((e) => e['kategori'].toString()).where((e) => e.isNotEmpty).toSet().length;
-    final int hampirHabis = _products.where((e) {
+    final controller = context.watch<AdminProdukController>();
+    final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+
+    final int totalKategori = controller.products
+        .map((e) => e['kategori'].toString())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .length;
+    final int hampirHabis = controller.products.where((e) {
       final stok = int.tryParse(e['jumlah_stok']?.toString() ?? '0') ?? 0;
       return stok > 0 && stok < 15;
     }).length;
@@ -296,12 +148,18 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                 const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('MedFast Admin', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text(
+                      'MedFast Admin',
+                      style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
                     Icon(Icons.notifications_none_outlined, color: Colors.white, size: 22),
                   ],
                 ),
                 const SizedBox(height: 36),
-                const Text('Tambah Obat Baru', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Tambah Obat Baru',
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 12),
                 const Text(
                   'Masukkan detail informasi obat dengan\nlengkap.',
@@ -314,14 +172,19 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
 
           // List & Content
           Expanded(
-            child: _loading
+            child: controller.loading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
                 : RefreshIndicator(
-                    onRefresh: _loadProducts,
+                    onRefresh: () => controller.loadProducts(user?.pharmacyId),
                     color: AppColors.darkGreen,
                     child: ListView(
                       padding: const EdgeInsets.all(20),
                       children: [
+                        if (controller.errorMessage != null)
+                           Padding(
+                             padding: const EdgeInsets.only(bottom: 16),
+                             child: Text(controller.errorMessage!, style: const TextStyle(color: Colors.red)),
+                           ),
                         // Tambah Obat Button
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
@@ -333,16 +196,19 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                           ),
                           icon: const Icon(Icons.add, size: 20),
                           label: const Text('Tambah Obat', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                          onPressed: () => _showForm(),
+                          onPressed: () => _showForm(context),
                         ),
                         const SizedBox(height: 16),
 
                         // Search Bar
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: TextField(
-                            onChanged: _filter,
+                            onChanged: controller.onSearchChanged,
                             decoration: const InputDecoration(
                               icon: Icon(Icons.search, color: Colors.black45, size: 20),
                               hintText: 'Cari nama obat, kategori, atau kode...',
@@ -351,7 +217,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
 
                         // Grid Stats
                         GridView.count(
@@ -362,7 +228,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                           mainAxisSpacing: 16,
                           childAspectRatio: 1.3,
                           children: [
-                            _buildStatCard('Total\nProduk', '${_products.length}', Icons.medical_services_outlined, const Color(0xFFEAF5F8), const Color(0xFF1E4B3B)),
+                            _buildStatCard('Total\nProduk', '${controller.products.length}', Icons.medical_services_outlined, const Color(0xFFEAF5F8), const Color(0xFF1E4B3B)),
                             _buildStatCard('Stok\nTerjual', '1.2k', Icons.trending_up, const Color(0xFFEAF5F8), const Color(0xFF1E4B3B)),
                             _buildStatCard('Hampir\nHabis', '$hampirHabis', Icons.warning_amber_rounded, const Color(0xFFF5EBEB), Colors.red, isAlert: true),
                             _buildStatCard('Kategori', '$totalKategori', Icons.category_outlined, const Color(0xFFEAF5F8), const Color(0xFF1E4B3B)),
@@ -371,7 +237,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                         const SizedBox(height: 24),
 
                         // List Obat
-                        if (_filtered.isEmpty)
+                        if (controller.filtered.isEmpty)
                           const Center(
                             child: Padding(
                               padding: EdgeInsets.symmetric(vertical: 40),
@@ -379,10 +245,10 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
                             ),
                           )
                         else
-                          ..._filtered.map((data) => _buildCard(data)).toList(),
+                          ...controller.filtered.map((data) => _buildCard(context, data)).toList(),
 
                         const SizedBox(height: 24),
-                        if (_filtered.isNotEmpty) _buildPagination(),
+                        if (controller.filtered.isNotEmpty) _buildPagination(),
                         const SizedBox(height: 80),
                       ],
                     ),
@@ -410,7 +276,9 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
             children: [
               Icon(icon, color: textColor, size: 18),
               const SizedBox(width: 6),
-              Expanded(child: Text(label, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w500, height: 1.2))),
+              Expanded(
+                child: Text(label, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w500, height: 1.2)),
+              ),
             ],
           ),
           const Spacer(),
@@ -420,7 +288,7 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
     );
   }
 
-  Widget _buildCard(Map<String, dynamic> data) {
+  Widget _buildCard(BuildContext context, Map<String, dynamic> data) {
     final name = data['nama_obat'] ?? data['name'] ?? '-';
     final category = data['kategori'] ?? 'Umum';
     final idObat = data['id_obat'] ?? data['id'] ?? '-';
@@ -429,19 +297,19 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.network(
               imageUrl,
-              width: 56, height: 56, fit: BoxFit.cover,
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
-                width: 56, height: 56,
+                width: 56,
+                height: 56,
                 color: const Color(0xFFEAF0FC),
                 child: const Icon(Icons.medication, color: AppColors.darkGreen),
               ),
@@ -452,7 +320,13 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text('Kategori: $category', style: const TextStyle(color: Colors.black54, fontSize: 10)),
                 Text('ID: MED-${idObat.toString().padLeft(3, '0')}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
@@ -464,13 +338,13 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined, color: Colors.green, size: 20),
-                onPressed: () => _showForm(data),
+                onPressed: () => _showForm(context, data),
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(6),
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                onPressed: () => _hapus(data),
+                onPressed: () => _hapus(context, data),
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(6),
               ),
@@ -510,22 +384,17 @@ class _AdminProdukPageState extends State<AdminProdukPage> {
           ? Icon(content, color: Colors.black54, size: 18)
           : Text(
               content.toString(),
-              style: TextStyle(
-                color: isActive ? Colors.white : Colors.black87,
-                fontSize: 13,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              ),
+              style: TextStyle(color: isActive ? Colors.white : Colors.black87, fontSize: 13, fontWeight: isActive ? FontWeight.bold : FontWeight.normal),
             ),
     );
   }
 }
 
-// ΓöÇΓöÇΓöÇ Bottom Sheet Tambah / Edit Produk ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Bottom Sheet Tambah / Edit Produk ──
 class _ProdukSheet extends StatefulWidget {
   final Map<String, dynamic>? existing;
-  final VoidCallback onSaved;
-  final VoidCallback? onDelete;
-  const _ProdukSheet({this.existing, required this.onSaved, this.onDelete});
+  final BuildContext parentContext;
+  const _ProdukSheet({this.existing, required this.parentContext});
 
   @override
   State<_ProdukSheet> createState() => _ProdukSheetState();
@@ -533,63 +402,44 @@ class _ProdukSheet extends StatefulWidget {
 
 class _ProdukSheetState extends State<_ProdukSheet> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameCtrl,
-      _priceCtrl,
-      _imageCtrl,
-      _descCtrl,
-      _catCtrl,
-      _stockCtrl;
+  late TextEditingController _nameCtrl, _priceCtrl, _imageCtrl, _descCtrl, _catCtrl, _stockCtrl;
   Uint8List? _imageBytes;
   bool _loading = false;
 
+  final List<String> _kategoriList = ['Pil', 'Suplemen', 'Antibiotik', 'Resep Dokter'];
+
   bool get _isEdit => widget.existing != null;
-  String get _docId =>
-      (widget.existing?['id_obat'] ?? widget.existing?['id'] ?? '').toString();
+  String get _docId => (widget.existing?['id_obat'] ?? widget.existing?['id'] ?? '').toString();
 
   @override
   void initState() {
     super.initState();
     final d = widget.existing;
-    _nameCtrl = TextEditingController(
-      text: d?['nama_obat'] ?? d?['name'] ?? '',
-    );
-    _priceCtrl = TextEditingController(
-      text: (d?['harga'] ?? d?['price'])?.toString() ?? '',
-    );
-    _imageCtrl = TextEditingController(
-      text: d?['gambar'] ?? d?['imageUrl'] ?? '',
-    );
-    _descCtrl = TextEditingController(
-      text: d?['deskripsi'] ?? d?['description'] ?? '',
-    );
-    _catCtrl = TextEditingController(
-      text: d?['kategori'] ?? d?['category'] ?? '',
-    );
-    _stockCtrl = TextEditingController(
-      text: (d?['jumlah_stok'] ?? d?['stock'])?.toString() ?? '',
-    );
+    _nameCtrl = TextEditingController(text: d?['nama_obat'] ?? d?['name'] ?? '');
+    _priceCtrl = TextEditingController(text: (d?['harga'] ?? d?['price'])?.toString() ?? '');
+    _imageCtrl = TextEditingController(text: d?['gambar'] ?? d?['imageUrl'] ?? '');
+    _descCtrl = TextEditingController(text: d?['deskripsi'] ?? d?['description'] ?? '');
+    _catCtrl = TextEditingController(text: d?['kategori'] ?? d?['category'] ?? '');
+    if (_catCtrl.text.isNotEmpty && !_kategoriList.contains(_catCtrl.text)) {
+      _kategoriList.add(_catCtrl.text);
+    }
+    _stockCtrl = TextEditingController(text: (d?['jumlah_stok'] ?? d?['stock'])?.toString() ?? '');
   }
 
   @override
   void dispose() {
-    for (final c in [
-      _nameCtrl,
-      _priceCtrl,
-      _imageCtrl,
-      _descCtrl,
-      _catCtrl,
-      _stockCtrl,
-    ])
-      c.dispose();
+    _nameCtrl.dispose();
+    _priceCtrl.dispose();
+    _imageCtrl.dispose();
+    _descCtrl.dispose();
+    _catCtrl.dispose();
+    _stockCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _pilihGambar() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 70,
-    );
+    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (file != null) {
       final bytes = await file.readAsBytes();
       setState(() => _imageBytes = bytes);
@@ -599,167 +449,58 @@ class _ProdukSheetState extends State<_ProdukSheet> {
   Future<void> _simpan() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    try {
-      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-      if (user == null) throw Exception('Sesi berakhir, login kembali.');
-      final authService = AuthService();
-      final token = await authService.token;
-      if (token == null)
-        throw Exception('Token tidak ditemukan, silakan login ulang.');
+    
+    final controller = widget.parentContext.read<AdminProdukController>();
+    final user = Provider.of<AuthProvider>(widget.parentContext, listen: false).userModel;
+    
+    final fields = <String, String>{
+      'nama_obat': _nameCtrl.text.trim(),
+      'deskripsi': _descCtrl.text.trim(),
+      'kategori': _catCtrl.text.trim(),
+      'harga': _priceCtrl.text.trim(),
+    };
+    
+    if (_isEdit && widget.existing?['id_stok'] != null) {
+      fields['id_stok'] = widget.existing!['id_stok'].toString();
+    }
 
-      final fields = <String, String>{
-        'nama_obat': _nameCtrl.text.trim(),
-        'deskripsi': _descCtrl.text.trim(),
-        'kategori': _catCtrl.text.trim(),
-        'harga': _priceCtrl.text.trim(),
-      };
+    final success = await controller.simpanProduk(
+      isEdit: _isEdit,
+      docId: _docId,
+      fields: fields,
+      imageBytes: _imageBytes,
+      stockStr: _stockCtrl.text.trim(),
+      pharmacyId: user?.pharmacyId,
+    );
 
-      debugPrint(
-        '[_simpan] Mengirim ke API: ${ApiClient.baseUrl}${_isEdit ? "/obat/$_docId" : "/obat"}',
-      );
-      debugPrint('[_simpan] Fields: $fields');
-      debugPrint(
-        '[_simpan] Gambar: ${_imageBytes != null ? "${_imageBytes!.length} bytes" : "tidak ada"}',
-      );
-
-      final streamed = await ApiClient.multipart(
-        method: _isEdit ? 'PUT' : 'POST',
-        endpoint: _isEdit ? '/obat/$_docId' : '/obat',
-        fields: fields,
-        imageBytes: _imageBytes,
-        filename: _imageBytes != null
-            ? 'product_${DateTime.now().millisecondsSinceEpoch}.jpg'
-            : null,
-        token: token,
-      );
-
-      final res = await http.Response.fromStream(streamed);
-      debugPrint('[_simpan] Status: ${res.statusCode}, Body: ${res.body}');
-
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        Map<String, dynamic> resData = {};
-        try {
-          resData = jsonDecode(res.body) as Map<String, dynamic>;
-        } catch (_) {}
-
-        // Coba semua kemungkinan struktur response API:
-        // { data: { id_obat } }, { obat: { id_obat } }, { result: { id_obat } },
-        // { id_obat }, { id }
-        String newObatId = '';
-        for (final key in ['data', 'obat', 'result', 'item']) {
-          final block = resData[key];
-          if (block != null && block is Map) {
-            final id = (block['id_obat'] ?? block['id'] ?? '').toString();
-            if (id.isNotEmpty && id != 'null') {
-              newObatId = id;
-              break;
-            }
-          }
-        }
-        if (newObatId.isEmpty) {
-          newObatId =
-              (resData['id_obat'] ?? resData['id'] ?? '').toString();
-          if (newObatId == 'null') newObatId = '';
-        }
-        if (newObatId.isEmpty && _isEdit) {
-          newObatId = _docId;
-        }
-        debugPrint('[_simpan] ID obat berhasil: "$newObatId"');
-        debugPrint('[_simpan] user.pharmacyId: "${user.pharmacyId}"');
-        debugPrint('[_simpan] Full response body: ${res.body}');
-
-        // Simpan stok hanya jika ada pharmacyId dan stok diisi
-        final stockStr = _stockCtrl.text.trim();
-        if (stockStr.isNotEmpty &&
-            user.pharmacyId != null &&
-            user.pharmacyId!.isNotEmpty &&
-            newObatId.isNotEmpty) {
-          final stockVal = int.tryParse(stockStr) ?? 0;
-          final apotekId = int.tryParse(user.pharmacyId!) ?? 0;
-          final parsedObatId = int.tryParse(newObatId);
-          debugPrint('========== CEK STOK ==========');
-          debugPrint('user.pharmacyId = ${user.pharmacyId}');
-          debugPrint('apotekId        = $apotekId');
-          debugPrint('parsedObatId    = $parsedObatId');
-          debugPrint('stockVal        = $stockVal');
-          debugPrint('==============================');
-          if (apotekId > 0 && parsedObatId != null && parsedObatId > 0) {
-            final existingStockId = widget.existing?['id_stok'];
-            http.Response stokRes;
-            if (existingStockId != null) {
-              debugPrint(
-                '[_simpan] PUT /stok-obat/$existingStockId stok=$stockVal',
-              );
-              stokRes = await ApiClient.put('/stok-obat/$existingStockId', {
-                'jumlah_stok': stockVal,
-              }, token: token);
-            } else {
-              debugPrint(
-                '[_simpan] POST /stok-obat apotek=$apotekId obat=$parsedObatId stok=$stockVal',
-              );
-              stokRes = await ApiClient.post('/stok-obat', {
-                'id_apotek': apotekId,
-                'id_obat': parsedObatId,
-                'jumlah_stok': stockVal,
-              }, token: token);
-            }
-            debugPrint(
-              '[_simpan] Stok response: ${stokRes.statusCode} ${stokRes.body}',
-            );
-            if (stokRes.statusCode != 200 && stokRes.statusCode != 201) {
-              String stokErrMsg = 'Gagal simpan stok [${stokRes.statusCode}]';
-              try {
-                stokErrMsg =
-                    jsonDecode(stokRes.body)['message'] ?? stokErrMsg;
-              } catch (_) {}
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(stokErrMsg),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
-            }
-          } else {
-            debugPrint('[_simpan] SKIP stok: apotekId=$apotekId parsedObatId=$parsedObatId (salah satu <= 0 atau null)');
-          }
-        } else {
-          debugPrint('[_simpan] SKIP stok: stockStr="$stockStr" pharmacyId="${user.pharmacyId}" newObatId="$newObatId"');
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _isEdit ? 'Produk diperbarui!' : 'Produk ditambahkan!',
-              ),
-              backgroundColor: AppColors.darkGreen,
-            ),
-          );
-          Navigator.pop(context);
-          widget.onSaved();
-        }
-      } else {
-        String errMsg = 'Gagal menyimpan [${res.statusCode}]';
-        try {
-          errMsg = jsonDecode(res.body)['message'] ?? errMsg;
-        } catch (_) {}
-        throw Exception(errMsg);
-      }
-    } catch (e) {
-      if (mounted) {
+    if (mounted) {
+      setState(() => _loading = false);
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal: $e'),
-            backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 5),
-          ),
+          SnackBar(content: Text(_isEdit ? 'Produk diperbarui!' : 'Produk ditambahkan!'), backgroundColor: AppColors.darkGreen),
+        );
+        Navigator.pop(context);
+        controller.loadProducts(user?.pharmacyId);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: ${controller.errorMessage}'), backgroundColor: Colors.redAccent, duration: const Duration(seconds: 5)),
         );
       }
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _hapusFromForm() async {
+     Navigator.pop(context);
+     final controller = widget.parentContext.read<AdminProdukController>();
+     final user = Provider.of<AuthProvider>(widget.parentContext, listen: false).userModel;
+     
+     final success = await controller.hapusProduk(widget.existing!);
+     if (success && widget.parentContext.mounted) {
+         ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+           const SnackBar(content: Text('Produk berhasil dihapus'), backgroundColor: AppColors.darkGreen),
+         );
+         controller.loadProducts(user?.pharmacyId);
+     }
   }
 
   @override
@@ -807,7 +548,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                 ],
               ),
             ),
-            
+
             // White Form Container
             Positioned(
               top: 80,
@@ -836,7 +577,8 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                                   GestureDetector(
                                     onTap: _pilihGambar,
                                     child: Container(
-                                      width: 100, height: 100,
+                                      width: 100,
+                                      height: 100,
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(20),
@@ -845,12 +587,13 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                                       child: _imageBytes != null
                                           ? ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.memory(_imageBytes!, fit: BoxFit.cover))
                                           : existingImg != null && existingImg.toString().isNotEmpty
-                                              ? ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.network(existingImg, fit: BoxFit.cover))
-                                              : const Icon(Icons.image_outlined, color: Colors.black26, size: 40),
+                                          ? ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.network(existingImg, fit: BoxFit.cover))
+                                          : const Icon(Icons.image_outlined, color: Colors.black26, size: 40),
                                     ),
                                   ),
                                   Positioned(
-                                    bottom: -4, right: -4,
+                                    bottom: -4,
+                                    right: -4,
                                     child: GestureDetector(
                                       onTap: _pilihGambar,
                                       child: Container(
@@ -863,10 +606,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(
-                                _isEdit ? 'Ubah Foto Obat' : 'Upload Foto Obat',
-                                style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
+                              Text(_isEdit ? 'Ubah Foto Obat' : 'Upload Foto Obat', style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -875,7 +615,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                         // Form Fields
                         _field('Nama Obat', _nameCtrl, Icons.local_offer_outlined),
                         const SizedBox(height: 16),
-                        _field('Kategori', _catCtrl, Icons.category_outlined, required: false, isDropdown: true),
+                        _field('Kategori', _catCtrl, Icons.category_outlined, required: false, isDropdown: true, dropdownItems: _kategoriList),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -887,7 +627,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                         const SizedBox(height: 16),
                         _field('Deskripsi', _descCtrl, Icons.description_outlined, required: false, maxLines: 4),
                         const SizedBox(height: 32),
-                        
+
                         // Submit Button
                         SizedBox(
                           width: double.infinity,
@@ -902,18 +642,15 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                             icon: _loading ? const SizedBox() : const Icon(Icons.save_outlined, color: Colors.white, size: 20),
                             label: _loading
                                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : Text(
-                                    _isEdit ? 'Simpan Perubahan' : 'Simpan Data',
-                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                                  ),
+                                : Text(_isEdit ? 'Simpan Perubahan' : 'Simpan Data', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                           ),
                         ),
 
-                        if (_isEdit && widget.onDelete != null) ...[
+                        if (_isEdit) ...[
                           const SizedBox(height: 16),
                           Center(
                             child: TextButton(
-                              onPressed: widget.onDelete,
+                              onPressed: _hapusFromForm,
                               child: const Text('Hapus Obat', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15)),
                             ),
                           ),
@@ -930,7 +667,22 @@ class _ProdukSheetState extends State<_ProdukSheet> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, IconData icon, {TextInputType? keyboard, bool required = true, int maxLines = 1, bool isDropdown = false}) {
+  Widget _field(
+    String label, TextEditingController ctrl, IconData icon, {
+    TextInputType? keyboard, bool required = true, int maxLines = 1,
+    bool isDropdown = false, List<String>? dropdownItems,
+  }) {
+    final decoration = InputDecoration(
+      hintText: 'Pilih $label',
+      hintStyle: const TextStyle(color: Colors.black38, fontSize: 13),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.darkGreen, width: 1.5)),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -947,16 +699,21 @@ class _ProdukSheetState extends State<_ProdukSheet> {
           keyboardType: keyboard,
           maxLines: maxLines,
           validator: required ? (v) => (v == null || v.trim().isEmpty) ? 'Tidak boleh kosong' : null : null,
-          decoration: InputDecoration(
+          decoration: decoration.copyWith(
             hintText: 'Masukkan $label',
-            hintStyle: const TextStyle(color: Colors.black38, fontSize: 13),
-            suffixIcon: isDropdown ? const Icon(Icons.keyboard_arrow_down, color: Colors.black54) : null,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.darkGreen, width: 1.5)),
+            suffixIcon: (isDropdown && dropdownItems != null)
+                ? PopupMenuButton<String>(
+                    icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
+                    onSelected: (String value) {
+                      ctrl.text = value;
+                    },
+                    itemBuilder: (BuildContext context) {
+                      return dropdownItems.map((String choice) {
+                        return PopupMenuItem<String>(value: choice, child: Text(choice));
+                      }).toList();
+                    },
+                  )
+                : null,
           ),
         ),
       ],

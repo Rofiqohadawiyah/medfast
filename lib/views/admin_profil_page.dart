@@ -1,147 +1,123 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
+import '../controllers/admin_profil_controller.dart';
 import '../utils/colors.dart';
 import 'welcome_page.dart';
 import 'password_page.dart';
 
-class AdminProfilPage extends StatefulWidget {
+class AdminProfilPage extends StatelessWidget {
   const AdminProfilPage({super.key});
 
   @override
-  State<AdminProfilPage> createState() => _AdminProfilPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AdminProfilController(),
+      child: const _AdminProfilUI(),
+    );
+  }
 }
 
-class _AdminProfilPageState extends State<AdminProfilPage> {
-  bool _loading = false;
-  Map<String, dynamic>? _apotekData;
+class _AdminProfilUI extends StatefulWidget {
+  const _AdminProfilUI();
 
+  @override
+  State<_AdminProfilUI> createState() => _AdminProfilUIState();
+}
+
+class _AdminProfilUIState extends State<_AdminProfilUI> {
   @override
   void initState() {
     super.initState();
-    _fetchApotekDetails();
-  }
-
-  Future<void> _fetchApotekDetails() async {
-    final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-    if (user?.pharmacyId == null) return;
-
-    try {
-      final res = await ApiClient.get('/apotek');
-      if (res.statusCode == 200) {
-        final List<dynamic> list = jsonDecode(res.body);
-        final match = list.firstWhere(
-          (a) => a['id_apotek']?.toString() == user!.pharmacyId,
-          orElse: () => null,
-        );
-        if (mounted && match != null) {
-          setState(() {
-            _apotekData = match;
-          });
-        }
-      }
-    } catch (_) {}
+    Future.microtask(() {
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+      context.read<AdminProfilController>().fetchApotekDetails(user?.pharmacyId);
+    });
   }
 
   void _showEditProfileDialog() {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-    final nameCtrl = TextEditingController(text: user?.name ?? '');
-    final phoneCtrl = TextEditingController(text: user?.phone ?? '');
+    if (user == null) return;
+    
+    final controller = context.read<AdminProfilController>();
+
+    final nameCtrl = TextEditingController(text: user.name);
+    final phoneCtrl = TextEditingController(text: user.phone);
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: const Text('Ubah Profil Admin', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(labelText: 'Nama Admin'),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Nama tidak boleh kosong' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: phoneCtrl,
-                      decoration: const InputDecoration(labelText: 'No. Handphone'),
-                      keyboardType: TextInputType.phone,
-                      validator: (v) => v == null || v.trim().isEmpty ? 'No. HP tidak boleh kosong' : null,
-                    ),
-                  ],
+      builder: (dialogContext) {
+        return ChangeNotifierProvider.value(
+          value: controller,
+          child: Consumer<AdminProfilController>(
+            builder: (context, controller, _) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: const Text('Ubah Profil Admin', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(labelText: 'Nama Admin'),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Nama tidak boleh kosong' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: phoneCtrl,
+                        decoration: const InputDecoration(labelText: 'No. Handphone'),
+                        keyboardType: TextInputType.phone,
+                        validator: (v) => v == null || v.trim().isEmpty ? 'No. HP tidak boleh kosong' : null,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkGreen,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _loading ? null : () async {
-                  if (!formKey.currentState!.validate()) return;
-                  setDialogState(() => _loading = true);
-                  try {
-                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                    final authService = AuthService();
-                    final token = await authService.token;
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Batal')),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: controller.isLoading ? null : () async {
+                    if (!formKey.currentState!.validate()) return;
 
-                    final response = await ApiClient.put(
-                      '/profile',
-                      {
-                        'nama': nameCtrl.text.trim(),
-                        'no_hp': phoneCtrl.text.trim(),
-                      },
-                      token: token,
+                    final updatedUser = await controller.updateProfile(
+                      currentUser: user!,
+                      name: nameCtrl.text.trim(),
+                      phone: phoneCtrl.text.trim(),
                     );
 
-                    if (response.statusCode == 200) {
-                      final responseBody = jsonDecode(response.body);
-                      final updatedData = responseBody['data'];
-                      final updatedUser = UserModel.fromJson(updatedData);
-
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('user_data', jsonEncode(updatedData));
-
+                    if (updatedUser != null && context.mounted) {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
                       authProvider.updateUserFromModel(updatedUser);
 
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
                       if (context.mounted) {
-                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Profil admin berhasil diperbarui'), backgroundColor: AppColors.darkGreen),
                         );
                       }
-                    } else {
-                      throw Exception(jsonDecode(response.body)['message'] ?? 'Gagal');
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
+                    } else if (controller.errorMessage != null && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.redAccent),
+                        SnackBar(content: Text(controller.errorMessage!), backgroundColor: Colors.redAccent),
                       );
                     }
-                  } finally {
-                    setDialogState(() => _loading = false);
-                  }
-                },
-                child: const Text('Simpan'),
-              ),
-            ],
-          );
-        });
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        ));
       },
     );
   }
@@ -155,11 +131,7 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
       return;
     }
 
-    final namaApotek = _apotekData?['nama_apotek'] ?? '-';
-    final alamat = _apotekData?['alamat'] ?? '-';
-    final lat = (_apotekData?['latitude'] ?? _apotekData?['lat'] ?? '-').toString();
-    final lng = (_apotekData?['longitude'] ?? _apotekData?['lng'] ?? '-').toString();
-    final jam = _apotekData?['jam_operasional'] ?? _apotekData?['jam_kerja'] ?? '-';
+    final controller = context.read<AdminProfilController>();
 
     showDialog(
       context: context,
@@ -176,15 +148,15 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _infoRow(Icons.store_outlined, 'Nama Apotek', namaApotek),
+              _infoRow(Icons.store_outlined, 'Nama Apotek', controller.getApotekName()),
               const Divider(height: 20),
-              _infoRow(Icons.place_outlined, 'Alamat', alamat),
+              _infoRow(Icons.place_outlined, 'Alamat', controller.getApotekAddress()),
               const Divider(height: 20),
-              _infoRow(Icons.my_location_outlined, 'Latitude', lat),
+              _infoRow(Icons.my_location_outlined, 'Latitude', controller.getApotekLat()),
               const Divider(height: 20),
-              _infoRow(Icons.my_location_outlined, 'Longitude', lng),
+              _infoRow(Icons.my_location_outlined, 'Longitude', controller.getApotekLng()),
               const Divider(height: 20),
-              _infoRow(Icons.access_time_outlined, 'Jam Operasional', jam),
+              _infoRow(Icons.access_time_outlined, 'Jam Operasional', controller.getApotekJam()),
             ],
           ),
         ),
@@ -230,6 +202,7 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.userModel;
+    final controller = context.watch<AdminProfilController>();
 
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
@@ -291,7 +264,7 @@ class _AdminProfilPageState extends State<AdminProfilPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _apotekData?['nama_apotek'] ?? 'Apotek Mitra',
+                    controller.getApotekName() != '-' ? controller.getApotekName() : 'Apotek Mitra',
                     style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],

@@ -1,26 +1,34 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import '../controllers/password_controller.dart';
 import '../utils/colors.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
 
-class PasswordPage extends StatefulWidget {
+class PasswordPage extends StatelessWidget {
   const PasswordPage({super.key});
 
   @override
-  State<PasswordPage> createState() => _PasswordPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => PasswordController(),
+      child: const _PasswordPageUI(),
+    );
+  }
 }
 
-class _PasswordPageState extends State<PasswordPage> {
+class _PasswordPageUI extends StatefulWidget {
+  const _PasswordPageUI();
+
+  @override
+  State<_PasswordPageUI> createState() => _PasswordPageUIState();
+}
+
+class _PasswordPageUIState extends State<_PasswordPageUI> {
   final _oldPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscureOld = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -31,176 +39,124 @@ class _PasswordPageState extends State<PasswordPage> {
   }
 
   void _handleChangePassword() async {
-    final oldPw = _oldPasswordController.text;
-    final newPw = _newPasswordController.text;
-    final confPw = _confirmPasswordController.text;
+    final controller = context.read<PasswordController>();
+    final success = await controller.changePassword(
+      _oldPasswordController.text,
+      _newPasswordController.text,
+      _confirmPasswordController.text,
+    );
 
-    if (oldPw.isEmpty || newPw.isEmpty || confPw.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Semua field wajib diisi')),
-      );
-      return;
-    }
-
-    if (newPw != confPw) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Konfirmasi password baru tidak sesuai')),
-      );
-      return;
-    }
-
-    if (newPw.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password baru minimal harus 6 karakter')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-
-      final response = await ApiClient.put(
-        '/profile/change-password',
-        {
-          'old_password': oldPw,
-          'new_password': newPw,
-        },
-        token: token,
-      );
-
-      if (response.statusCode == 200) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Password berhasil diubah')),
-          );
-          Navigator.pop(context);
-        }
-      } else {
-        final errorMsg = jsonDecode(response.body)['message'] ?? 'Gagal mengubah password';
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+    if (context.mounted) {
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Koneksi bermasalah: $e')),
+          SnackBar(content: Text(controller.successMessage!), backgroundColor: AppColors.darkGreen),
+        );
+        Navigator.pop(context);
+      } else if (controller.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(controller.errorMessage!), backgroundColor: Colors.redAccent),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      controller.clearMessages();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context).userModel;
+    final controller = context.watch<PasswordController>();
 
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.only(top: 60, bottom: 40),
-              decoration: const BoxDecoration(
-                color: AppColors.darkGreen,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const Expanded(
-                          child: Center(
-                            child: Text(
-                              'Ganti Password',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 48),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.lock, size: 60, color: AppColors.darkGreen),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    user?.name ?? '',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+      body: Column(
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 60, bottom: 30),
+            decoration: const BoxDecoration(
+              color: AppColors.darkGreen,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
               ),
             ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Text(
+                        'Ubah Password',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 48), // Balance for back button
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Lock Icon Frame
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.lightGreen, width: 4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.lock_outline, size: 45, color: AppColors.darkGreen),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-            const SizedBox(height: 30),
+          const SizedBox(height: 30),
 
-            // Form
-            Padding(
+          // Form
+          Expanded(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
                   _buildPasswordField(
-                    hint: 'Masukkan password lama',
+                    label: 'Password Lama',
                     controller: _oldPasswordController,
-                    obscure: _obscureOld,
+                    obscureText: _obscureOld,
                     onToggle: () => setState(() => _obscureOld = !_obscureOld),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   _buildPasswordField(
-                    hint: 'Masukkan password baru (min. 6 karakter)',
+                    label: 'Password Baru',
                     controller: _newPasswordController,
-                    obscure: _obscureNew,
+                    obscureText: _obscureNew,
                     onToggle: () => setState(() => _obscureNew = !_obscureNew),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   _buildPasswordField(
-                    hint: 'Konfirmasi password baru',
+                    label: 'Konfirmasi Password Baru',
                     controller: _confirmPasswordController,
-                    obscure: _obscureConfirm,
+                    obscureText: _obscureConfirm,
                     onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                   const SizedBox(height: 40),
-                  
-                  // Submit Button
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -210,14 +166,19 @@ class _PasswordPageState extends State<PasswordPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
+                        elevation: 0,
                       ),
-                      onPressed: _isLoading ? null : _handleChangePassword,
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
+                      onPressed: controller.isLoading ? null : _handleChangePassword,
+                      child: controller.isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
                           : const Text(
-                              'Simpan Perubahan',
+                              'Ubah Password',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
@@ -227,50 +188,65 @@ class _PasswordPageState extends State<PasswordPage> {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildPasswordField({
-    required String hint,
+    required String label,
     required TextEditingController controller,
-    required bool obscure,
+    required bool obscureText,
     required VoidCallback onToggle,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.lock_outline, color: AppColors.darkGreen, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              obscureText: obscure,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(color: Colors.black26, fontSize: 14),
-                border: InputBorder.none,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.lock_outline, color: AppColors.darkGreen),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: Colors.black38,
+                ),
+                onPressed: onToggle,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
           ),
-          IconButton(
-            icon: Icon(
-              obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-              color: Colors.black26,
-              size: 20,
-            ),
-            onPressed: onToggle,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

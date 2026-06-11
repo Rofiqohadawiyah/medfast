@@ -1,70 +1,130 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
-import '../utils/colors.dart';
+import '../controllers/chat_rooms_controller.dart';
 import 'chat_page.dart';
 import 'apotek_page.dart';
 
-class ChatRoomsPage extends StatefulWidget {
+class ChatRoomsPage extends StatelessWidget {
   const ChatRoomsPage({super.key});
 
   @override
-  State<ChatRoomsPage> createState() => _ChatRoomsPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ChatRoomsController(),
+      child: const _ChatRoomsPageUI(),
+    );
+  }
 }
 
-class _ChatRoomsPageState extends State<ChatRoomsPage> {
-  List<dynamic> _rooms = [];
-  bool _isLoading = true;
+class _ChatRoomsPageUI extends StatefulWidget {
+  const _ChatRoomsPageUI();
 
+  @override
+  State<_ChatRoomsPageUI> createState() => _ChatRoomsPageUIState();
+}
+
+class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
   @override
   void initState() {
     super.initState();
-    _fetchRooms();
+    Future.microtask(() {
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+      if (user != null) {
+        context.read<ChatRoomsController>().fetchRooms(user.uid);
+      }
+    });
   }
 
-  Future<void> _fetchRooms() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
+  void _refreshRooms() {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-    if (user == null) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-      return;
-    }
-
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-
-      final response = await ApiClient.get('/chat/rooms/${user.uid}', token: token);
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        final List<dynamic> rooms = decoded['data'] ?? [];
-        if (mounted) {
-          setState(() {
-            _rooms = rooms;
-            _isLoading = false;
-          });
-        }
-      } else {
-        throw Exception('Gagal memuat daftar obrolan');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-        );
-      }
+    if (user != null) {
+      context.read<ChatRoomsController>().fetchRooms(user.uid);
     }
   }
 
-  Widget _buildEmptyState() {
+  @override
+  Widget build(BuildContext context) {
+    final user = Provider.of<AuthProvider>(context).userModel;
+    final controller = context.watch<ChatRoomsController>();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFDFECE7),
+      body: Stack(
+        children: [
+          const SizedBox.expand(),
+
+          // Header hijau
+          Container(
+            height: 160,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Color(0xFF3F5E53),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(35),
+                bottomRight: Radius.circular(35),
+              ),
+            ),
+            padding: const EdgeInsets.only(top: 50, left: 16, right: 16),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Kotak Masuk Chat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: _refreshRooms,
+                ),
+              ],
+            ),
+          ),
+
+          // Konten chat list
+          Positioned(
+            top: 130,
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: controller.isLoading
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF3F5E53)))
+                    : controller.rooms.isEmpty
+                        ? _buildEmptyState(context)
+                        : _buildRoomList(controller, user),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Empty state saat belum ada chat.
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -105,220 +165,123 @@ class _ChatRoomsPageState extends State<ChatRoomsPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context).userModel;
-    return Scaffold(
-      backgroundColor: const Color(0xFFDFECE7),
-      body: Stack(
-        children: [
-          const SizedBox.expand(),
-          Container(
-            height: 160,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFF3F5E53),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(35),
-                bottomRight: Radius.circular(35),
-              ),
-            ),
-            padding: const EdgeInsets.only(top: 50, left: 16, right: 16),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+  /// Daftar room chat.
+  Widget _buildRoomList(ChatRoomsController controller, dynamic user) {
+    final isAdmin = user?.role == 'admin';
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: controller.rooms.length,
+      separatorBuilder: (_, __) => Divider(
+        height: 1,
+        color: Colors.black.withOpacity(0.06),
+        indent: 20,
+        endIndent: 20,
+      ),
+      itemBuilder: (context, index) {
+        final room = controller.rooms[index] as Map<String, dynamic>;
+        final displayName = controller.getDisplayName(room, isAdmin);
+        final lastMessage = controller.getLastMessage(room, isAdmin);
+        final unreadCount = controller.getUnreadCount(room);
+
+        // Gunakan waktu pesan terakhir, bukan tanggal_chat
+        final dateStr = controller.formatDate(
+          room['pesan_terakhir_waktu']?.toString() ?? room['tanggal_chat']?.toString(),
+        );
+
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChatPage(
+                  chatId: room['id_chat'],
+                  roomName: displayName,
+                  idAdmin: room['id_admin'] ?? 0,
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Kotak Masuk Chat',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+              ),
+            ).then((_) => _refreshRooms());
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Nama + pesan terakhir
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          fontWeight: unreadCount > 0 ? FontWeight.w900 : FontWeight.bold,
+                          fontSize: 16,
+                          color: const Color(0xFF1E3A2F),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        lastMessage,
+                        style: TextStyle(
+                          color: unreadCount > 0 ? Colors.black87 : Colors.black54,
+                          fontSize: 14,
+                          fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  onPressed: _fetchRooms,
+                const SizedBox(width: 16),
+                // Waktu + badge unread
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      dateStr,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: unreadCount > 0 ? const Color(0xFF25D366) : Colors.black38,
+                        fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (unreadCount > 0)
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF25D366),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            unreadCount > 99 ? '99+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.done_all,
+                        size: 16,
+                        color: Colors.black38,
+                      ),
+                  ],
                 ),
               ],
             ),
           ),
-          Positioned(
-            top: 130,
-            left: 16,
-            right: 16,
-            bottom: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF3F5E53)))
-                    : _rooms.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.separated(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            itemCount: _rooms.length,
-                            separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              color: Colors.black.withOpacity(0.06),
-                              indent: 20,
-                              endIndent: 20,
-                            ),
-                            itemBuilder: (context, index) {
-                              final room = _rooms[index];
-                              final apotek = room['apotek'] ?? {};
-                              final pelanggan = room['pelanggan'] ?? {};
-                              
-                              final isAdmin = user?.role == 'admin';
-                              final displayName = isAdmin
-                                  ? (pelanggan['nama'] ?? 'Pelanggan')
-                                  : (apotek['nama_apotek'] ?? 'Apotek');
-                              
-                              final dateStr = _formatDate(room['tanggal_chat']);
-                              final subtitleText = isAdmin
-                                  ? 'Pertanyaan seputar produk atau pesanan'
-                                  : 'Hubungi apotek untuk info produk atau pengiriman.';
-                              
-                              final lastMessage = room['pesan_terakhir'] ?? room['last_message'] ?? subtitleText;
-                              final unreadCount = room['unread_count'] ?? room['unread'] ?? 0;
-
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ChatPage(
-                                        chatId: room['id_chat'],
-                                        roomName: displayName,
-                                        idAdmin: room['id_admin'] ?? 0,
-                                      ),
-                                    ),
-                                  ).then((_) => _fetchRooms());
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              displayName,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: Color(0xFF1E3A2F),
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              lastMessage,
-                                              style: const TextStyle(
-                                                color: Colors.black54,
-                                                fontSize: 14,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            dateStr,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.black38,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          if (unreadCount > 0)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFF3F5E53),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Text(
-                                                '$unreadCount',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            )
-                                          else
-                                            const Icon(
-                                              Icons.done_all,
-                                              size: 16,
-                                              color: Colors.black38,
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
-  }
-
-  String _formatDate(String? isoString) {
-    if (isoString == null) return '';
-    try {
-      String cleanStr = isoString.trim();
-      if (!cleanStr.endsWith('Z') && !cleanStr.contains('+') && !cleanStr.contains(RegExp(r'-\d{2}:\d{2}'))) {
-        cleanStr = cleanStr.replaceAll(' ', 'T');
-        cleanStr = '${cleanStr}Z';
-      }
-      final date = DateTime.parse(cleanStr).toLocal();
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final yesterday = today.subtract(const Duration(days: 1));
-      final msgDay = DateTime(date.year, date.month, date.day);
-
-      if (msgDay == today) {
-        return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-      } else if (msgDay == yesterday) {
-        return 'Kemarin';
-      } else {
-        final months = [
-          'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-          'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'
-        ];
-        return '${date.day} ${months[date.month - 1]}';
-      }
-    } catch (_) {
-      return '';
-    }
   }
 }

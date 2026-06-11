@@ -1,187 +1,79 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
+import '../controllers/pesanan_controller.dart';
 import '../services/payment_service.dart';
 import '../utils/colors.dart';
 import 'chat_page.dart';
 import 'payment_webview_page.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-class PesananPage extends StatefulWidget {
+class PesananPage extends StatelessWidget {
   const PesananPage({super.key});
 
   @override
-  State<PesananPage> createState() => _PesananPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => PesananController(),
+      child: const _PesananPageUI(),
+    );
+  }
 }
 
-class _PesananPageState extends State<PesananPage> {
-  List<dynamic> _orders = [];
-  bool _isLoading = true;
-  IO.Socket? _socket;
+class _PesananPageUI extends StatefulWidget {
+  const _PesananPageUI({super.key});
 
+  @override
+  State<_PesananPageUI> createState() => _PesananPageUIState();
+}
+
+class _PesananPageUIState extends State<_PesananPageUI> {
   @override
   void initState() {
     super.initState();
-    _fetchOrders();
-    _initSocket();
+    Future.microtask(() {
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+      final controller = context.read<PesananController>();
+      controller.initSocket(user?.uid);
+      controller.fetchOrders();
+    });
   }
 
   @override
   void dispose() {
-    _socket?.disconnect();
-    _socket?.dispose();
+    Future.microtask(() {
+      if (mounted) {
+        context.read<PesananController>().disposeSocket();
+      }
+    });
     super.dispose();
   }
 
-  void _initSocket() {
-    try {
-      final rawUrl = ApiClient.baseUrl;
-      final socketUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/api'));
-
-      debugPrint('Initializing Customer Order Socket with URL: $socketUrl');
-
-      _socket = IO.io(
-        socketUrl,
-        IO.OptionBuilder()
-            .setTransports(['websocket'])
-            .disableAutoConnect()
-            .build(),
-      );
-
-      _socket!.connect();
-
-      _socket!.onConnect((_) {
-        debugPrint('Customer Order Socket connected successfully');
-        final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-        if (user != null) {
-          debugPrint('Customer Order Socket: Joining orders updates for user ${user.uid}');
-          _socket!.emit('join_orders_updates', user.uid);
-        } else {
-          debugPrint('Customer Order Socket: userModel is null');
-        }
-      });
-
-      _socket!.onConnectError((err) {
-        debugPrint('Customer Order Socket connection error: $err');
-      });
-
-      _socket!.onError((err) {
-        debugPrint('Customer Order Socket error: $err');
-      });
-
-      _socket!.on('order_status_updated', (data) {
-        debugPrint('Order status updated event received: $data');
-        _fetchOrders();
-      });
-
-      _socket!.onDisconnect((_) {
-        debugPrint('Customer Order Socket disconnected');
-      });
-    } catch (e) {
-      debugPrint('Error order socket init: $e');
-    }
-  }
-
-  Future<void> _fetchOrders() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-
-      final response = await ApiClient.get('/pesanan', token: token);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (mounted) {
-          setState(() {
-            _orders = data;
-            _isLoading = false;
-          });
-        }
-      } else {
-        throw Exception('Gagal mengambil data pesanan');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-        );
-      }
-    }
-  }
-
-  Future<void> _cancelOrder(int idPesanan) async {
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-
-      final response = await ApiClient.put(
-        '/pesanan/$idPesanan',
-        {'status_pesanan': 'dibatalkan'},
-        token: token,
-      );
-
-      if (response.statusCode == 200) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pesanan berhasil dibatalkan'), backgroundColor: AppColors.darkGreen),
-          );
-        }
-        _fetchOrders();
-      } else {
-        final errorMsg = jsonDecode(response.body)['message'] ?? 'Gagal membatalkan pesanan';
-        throw Exception(errorMsg);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
-        );
-      }
-    }
-  }
-
-  void _showOrderDetail(Map<String, dynamic> order) async {
+  void _showOrderDetail(BuildContext context, Map<String, dynamic> order) async {
+    final controller = context.read<PesananController>();
     final idPesanan = order['id_pesanan'];
+    
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator(color: AppColors.darkGreen)),
     );
 
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
+    final detail = await controller.fetchOrderDetail(idPesanan);
 
-      final response = await ApiClient.get('/pesanan/$idPesanan', token: token);
-      if (mounted) {
-        Navigator.pop(context); // Pop loading dialog
-      }
-
-      if (response.statusCode == 200) {
-        final orderDetail = jsonDecode(response.body);
-        if (mounted) {
-          _showDetailBottomSheet(orderDetail);
-        }
+    if (context.mounted) {
+      Navigator.pop(context); // Pop loading dialog
+      
+      if (detail != null) {
+        _showDetailBottomSheet(context, detail, controller);
       } else {
-        throw Exception('Gagal mengambil detail pesanan');
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Pop loading if still showing
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text(controller.errorMessage ?? 'Gagal mengambil detail pesanan'), backgroundColor: Colors.redAccent),
         );
       }
     }
   }
 
-  void _showDetailBottomSheet(Map<String, dynamic> detail) {
+  void _showDetailBottomSheet(BuildContext context, Map<String, dynamic> detail, PesananController controller) {
     final apotek = detail['apotek'] ?? {};
     final detailItems = detail['detail_pesanan'] ?? [];
     final Map<String, dynamic> pembayaran = (detail['pembayaran'] is List && (detail['pembayaran'] as List).isNotEmpty)
@@ -196,7 +88,7 @@ class _PesananPageState extends State<PesananPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (sheetContext) {
         return Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -206,7 +98,7 @@ class _PesananPageState extends State<PesananPage> {
             top: 24,
             left: 24,
             right: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -323,8 +215,8 @@ class _PesananPageState extends State<PesananPage> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           onPressed: () {
-                            Navigator.pop(context); // close sheet
-                            _confirmCancelDialog(detail['id_pesanan']);
+                            Navigator.pop(sheetContext); // close sheet
+                            _confirmCancelDialog(context, detail['id_pesanan'], controller);
                           },
                           child: const Text('Batalkan'),
                         ),
@@ -339,8 +231,8 @@ class _PesananPageState extends State<PesananPage> {
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         onPressed: () {
-                          Navigator.pop(context);
-                          _hubungiApotek(detail);
+                          Navigator.pop(sheetContext);
+                          _hubungiApotek(context, detail, controller);
                         },
                         icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
                         label: const Text('Chat Apotek', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -362,28 +254,30 @@ class _PesananPageState extends State<PesananPage> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () async {
-                        Navigator.pop(context); // tutup bottom sheet
+                        Navigator.pop(sheetContext); // tutup bottom sheet
                         final paymentService = PaymentService();
                         final snapData = await paymentService.getSnapToken(detail['id_pesanan']);
-                        if (snapData != null && snapData['payment_url'] != null && mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PaymentWebviewPage(
-                                paymentUrl: snapData['payment_url'],
-                                idPesanan: detail['id_pesanan'],
-                                onSuccess: _fetchOrders,
-                                onFailure: _fetchOrders,
+                        if (context.mounted) {
+                          if (snapData != null && snapData['payment_url'] != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PaymentWebviewPage(
+                                  paymentUrl: snapData['payment_url'],
+                                  idPesanan: detail['id_pesanan'],
+                                  onSuccess: controller.fetchOrders,
+                                  onFailure: controller.fetchOrders,
+                                ),
                               ),
-                            ),
-                          );
-                        } else if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Gagal mendapatkan link pembayaran'),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Gagal mendapatkan link pembayaran'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.payment, color: Colors.white),
@@ -398,18 +292,29 @@ class _PesananPageState extends State<PesananPage> {
     );
   }
 
-  void _confirmCancelDialog(int idPesanan) {
+  void _confirmCancelDialog(BuildContext context, int idPesanan, PesananController controller) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Batalkan Pesanan'),
         content: const Text('Apakah Anda yakin ingin membatalkan pesanan ini?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tidak')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Tidak')),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _cancelOrder(idPesanan);
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final success = await controller.cancelOrder(idPesanan);
+              if (context.mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pesanan berhasil dibatalkan'), backgroundColor: AppColors.darkGreen),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(controller.errorMessage ?? 'Gagal membatalkan pesanan'), backgroundColor: Colors.redAccent),
+                  );
+                }
+              }
             },
             child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.redAccent)),
           ),
@@ -418,7 +323,7 @@ class _PesananPageState extends State<PesananPage> {
     );
   }
 
-  void _hubungiApotek(Map<String, dynamic> order) async {
+  void _hubungiApotek(BuildContext context, Map<String, dynamic> order, PesananController controller) async {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
     if (user == null) return;
 
@@ -440,49 +345,24 @@ class _PesananPageState extends State<PesananPage> {
       builder: (context) => const Center(child: CircularProgressIndicator(color: AppColors.darkGreen)),
     );
 
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
+    final chatId = await controller.createChatRoom(int.parse(user.uid), idAdmin, idApotek);
 
-      final response = await ApiClient.post(
-        '/chat/room',
-        {
-          'id_pelanggan': int.parse(user.uid),
-          'id_admin': idAdmin,
-          'id_apotek': idApotek,
-        },
-        token: token,
-      );
-
-      if (mounted) {
-        Navigator.pop(context); // Pop loading indicator
-      }
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final resData = jsonDecode(response.body);
-        final room = resData['data'];
-        final chatId = room['id_chat'];
-
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChatPage(
-                chatId: chatId,
-                roomName: apotekName,
-                idAdmin: idAdmin,
-              ),
+    if (context.mounted) {
+      Navigator.pop(context); // Pop loading indicator
+      if (chatId != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatPage(
+              chatId: chatId,
+              roomName: apotekName,
+              idAdmin: idAdmin,
             ),
-          );
-        }
+          ),
+        );
       } else {
-        throw Exception('Gagal membuat room chat');
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Pop loading if still active
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memulai chat: ${e.toString()}'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text(controller.errorMessage ?? 'Gagal memulai chat'), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -490,6 +370,8 @@ class _PesananPageState extends State<PesananPage> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<PesananController>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: AppBar(
@@ -499,13 +381,13 @@ class _PesananPageState extends State<PesananPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _fetchOrders,
+            onPressed: controller.fetchOrders,
           ),
         ],
       ),
-      body: _isLoading
+      body: controller.isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
-          : _orders.isEmpty
+          : controller.orders.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -518,10 +400,10 @@ class _PesananPageState extends State<PesananPage> {
                 )
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: _orders.length,
+                  itemCount: controller.orders.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final order = _orders[index];
+                    final order = controller.orders[index];
                     final apotek = order['apotek'] ?? {};
                     final status = order['status_pesanan'] ?? 'menunggu';
 
@@ -529,7 +411,7 @@ class _PesananPageState extends State<PesananPage> {
                       elevation: 2,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       child: InkWell(
-                        onTap: () => _showOrderDetail(order),
+                        onTap: () => _showOrderDetail(context, order),
                         borderRadius: BorderRadius.circular(20),
                         child: Padding(
                           padding: const EdgeInsets.all(16),

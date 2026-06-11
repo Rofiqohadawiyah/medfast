@@ -1,120 +1,54 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
+import '../controllers/admin_beranda_controller.dart';
 import '../utils/colors.dart';
 import 'admin_main_screen.dart';
 import 'chat_rooms_page.dart';
 
-class AdminBerandaPage extends StatefulWidget {
+class AdminBerandaPage extends StatelessWidget {
   const AdminBerandaPage({super.key});
 
   @override
-  State<AdminBerandaPage> createState() => _AdminBerandaPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AdminBerandaController(),
+      child: const _AdminBerandaUI(),
+    );
+  }
 }
 
-class _AdminBerandaPageState extends State<AdminBerandaPage> {
-  int _totalProduk = 0;
-  int _pesananPending = 0;
-  int _pesananDiproses = 0;
-  int _pesananSelesai = 0;
-  double _totalPendapatan = 0;
-  bool _loading = true;
-  List<dynamic> _latestPesanan = [];
+class _AdminBerandaUI extends StatefulWidget {
+  const _AdminBerandaUI();
 
+  @override
+  State<_AdminBerandaUI> createState() => _AdminBerandaUIState();
+}
+
+class _AdminBerandaUIState extends State<_AdminBerandaUI> {
   @override
   void initState() {
     super.initState();
-    _loadSummary();
+    Future.microtask(() {
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+      context.read<AdminBerandaController>().loadSummary(user?.pharmacyId);
+    });
   }
 
-  Future<void> _loadSummary() async {
-    if (!mounted) return;
-    setState(() => _loading = true);
-
-    try {
-      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-      final apotekId = user?.pharmacyId;
-
-      final authService = AuthService();
-      final token = await authService.token;
-
-      final obatEndpoint = apotekId != null ? '/stok-obat?id_apotek=$apotekId' : '/obat';
-      final results = await Future.wait([
-        ApiClient.get(obatEndpoint, token: token),
-        ApiClient.get('/pesanan', token: token),
-      ]);
-
-      final obatRes = results[0];
-      final pesananRes = results[1];
-
-      int totalProduk = 0;
-      if (obatRes.statusCode == 200) {
-        totalProduk = (jsonDecode(obatRes.body) as List).length;
-      }
-
-      int pending = 0, diproses = 0, selesai = 0;
-      double pendapatan = 0;
-      if (pesananRes.statusCode == 200) {
-        final List<dynamic> allPesanan = jsonDecode(pesananRes.body);
-        final pesanan = apotekId != null
-            ? allPesanan.where((p) => p['id_apotek']?.toString() == apotekId).toList()
-            : allPesanan;
-
-        // Sort descending by id or created_at for recent orders
-        pesanan.sort((a, b) {
-          final idA = a['id_pesanan'] ?? a['id'] ?? 0;
-          final idB = b['id_pesanan'] ?? b['id'] ?? 0;
-          if (idA is int && idB is int) return idB.compareTo(idA);
-          return 0;
-        });
-
-        final latestPesanan = pesanan.take(3).toList();
-
-        for (var p in pesanan) {
-          final rawStatus = (p['status_pesanan'] ?? p['status'] ?? '').toString().toLowerCase();
-          final status = rawStatus == 'pending' ? 'menunggu' : rawStatus;
-          
-          if (status == 'menunggu') pending++;
-          if (status == 'diproses') diproses++;
-          if (status == 'selesai') {
-            selesai++;
-            pendapatan += (p['total_harga'] as num? ?? 0).toDouble();
-          }
-        }
-
-        if (mounted) {
-          setState(() {
-            _latestPesanan = latestPesanan;
-          });
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _totalProduk = totalProduk;
-          _pesananPending = pending;
-          _pesananDiproses = diproses;
-          _pesananSelesai = selesai;
-          _totalPendapatan = pendapatan;
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+  void _refresh() {
+    final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+    context.read<AdminBerandaController>().loadSummary(user?.pharmacyId);
   }
 
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).userModel;
+    final controller = context.watch<AdminBerandaController>();
 
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
       body: RefreshIndicator(
-        onRefresh: _loadSummary,
+        onRefresh: () async => _refresh(),
         color: AppColors.darkGreen,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -168,7 +102,7 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
               const SizedBox(height: 20),
 
               // ─── Quick Stats ────────────────────────────────────
-              if (_loading)
+              if (controller.isLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 30),
                   child: Center(child: CircularProgressIndicator(color: AppColors.darkGreen)),
@@ -184,10 +118,10 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
                     mainAxisSpacing: 16,
                     childAspectRatio: 1.5,
                     children: [
-                      _statCard('Total Produk', '$_totalProduk', Icons.medical_information_outlined, const Color(0xFF4299E1)),
-                      _statCard('Menunggu', '$_pesananPending', Icons.schedule_rounded, Colors.orange),
-                      _statCard('Diproses', '$_pesananDiproses', Icons.local_shipping_outlined, const Color(0xFF64748B)),
-                      _statCard('Selesai', '$_pesananSelesai', Icons.check_circle_outline, Colors.green),
+                      _statCard('Total Produk', '${controller.totalProduk}', Icons.medical_information_outlined, const Color(0xFF4299E1)),
+                      _statCard('Menunggu', '${controller.pesananPending}', Icons.schedule_rounded, Colors.orange),
+                      _statCard('Diproses', '${controller.pesananDiproses}', Icons.local_shipping_outlined, const Color(0xFF64748B)),
+                      _statCard('Selesai', '${controller.pesananSelesai}', Icons.check_circle_outline, Colors.green),
                     ],
                   ),
                 ),
@@ -218,7 +152,7 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
                             children: [
                               const Text('Total Pendapatan', style: TextStyle(color: Colors.white70, fontSize: 13)),
                               Text(
-                                'Rp ${_totalPendapatan.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+                                'Rp ${controller.formatCurrency(controller.totalPendapatan)}',
                                 style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -275,7 +209,7 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
                 const SizedBox(height: 24),
 
                 // ─── Pesanan Terbaru ────────────────────────────────
-                if (_latestPesanan.isNotEmpty)
+                if (controller.latestPesanan.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Container(
@@ -301,7 +235,7 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
                             ],
                           ),
                           const SizedBox(height: 24),
-                          ..._latestPesanan.map((p) => _buildRecentOrderItem(p)).toList(),
+                          ...controller.latestPesanan.map((p) => _buildRecentOrderItem(controller, p)).toList(),
                         ],
                       ),
                     ),
@@ -367,26 +301,12 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
     );
   }
 
-  Widget _buildRecentOrderItem(Map<String, dynamic> data) {
+  Widget _buildRecentOrderItem(AdminBerandaController controller, Map<String, dynamic> data) {
     final idPesanan = data['id_pesanan'] ?? data['id'] ?? '-';
     final customerName = data['nama_pembeli'] ?? data['customer_name'] ?? 'Pelanggan';
-    final rawStatus = (data['status_pesanan'] ?? data['status'] ?? '').toString().toUpperCase();
-    final status = rawStatus == 'PENDING' ? 'MENUNGGU' : rawStatus;
-
-    Color bgStatus, textStatus;
-    if (status == 'MENUNGGU') {
-      bgStatus = Colors.orange.shade50;
-      textStatus = Colors.orange;
-    } else if (status == 'DIPROSES') {
-      bgStatus = Colors.blue.shade50;
-      textStatus = Colors.blue;
-    } else if (status == 'SELESAI') {
-      bgStatus = Colors.green.shade50;
-      textStatus = Colors.green;
-    } else {
-      bgStatus = Colors.grey.shade100;
-      textStatus = Colors.grey;
-    }
+    final status = controller.getDisplayStatus(data);
+    final bgStatus = controller.getStatusBgColor(status);
+    final textStatus = controller.getStatusTextColor(status);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
@@ -421,4 +341,3 @@ class _AdminBerandaPageState extends State<AdminBerandaPage> {
     );
   }
 }
-

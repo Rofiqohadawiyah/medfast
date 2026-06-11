@@ -1,34 +1,41 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
+import '../controllers/admin_pesanan_controller.dart';
 import '../utils/colors.dart';
 
-class AdminPesananPage extends StatefulWidget {
+class AdminPesananPage extends StatelessWidget {
   const AdminPesananPage({super.key});
 
   @override
-  State<AdminPesananPage> createState() => _AdminPesananPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AdminPesananController(),
+      child: const _AdminPesananUI(),
+    );
+  }
 }
 
-class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  List<dynamic> _pesanan = [];
-  bool _loading = true;
-  String? _apotekId;
+class _AdminPesananUI extends StatefulWidget {
+  const _AdminPesananUI();
 
-  final List<String> _statusTabs = ['Semua', 'Menunggu', 'Diproses', 'Dikirim', 'Selesai', 'Dibatalkan'];
+  @override
+  State<_AdminPesananUI> createState() => _AdminPesananUIState();
+}
+
+class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  String? _apotekId;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _statusTabs.length, vsync: this);
+    final controller = Provider.of<AdminPesananController>(context, listen: false);
+    _tabController = TabController(length: controller.statusTabs.length, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = Provider.of<AuthProvider>(context, listen: false).userModel;
       _apotekId = user?.pharmacyId;
-      _loadPesanan();
+      controller.loadPesanan(_apotekId);
     });
   }
 
@@ -38,91 +45,28 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
     super.dispose();
   }
 
-  Future<void> _loadPesanan() async {
-    setState(() => _loading = true);
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-      final res = await ApiClient.get('/pesanan', token: token);
-      if (res.statusCode == 200) {
-        final all = jsonDecode(res.body) as List<dynamic>;
-        
-        // Filter di-sisi client juga sebagai fallback, meskipun backend sudah menyaringnya
-        final filtered = _apotekId != null
-            ? all.where((p) => p['id_apotek']?.toString() == _apotekId).toList()
-            : all;
-        if (mounted) setState(() { _pesanan = filtered; _loading = false; });
-      } else {
-        if (mounted) setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  List<dynamic> _filterByStatus(String status) {
-    if (status == 'Semua') return _pesanan;
-    return _pesanan.where((p) {
-      final stat = (p['status_pesanan'] ?? p['status'] ?? '').toString().toLowerCase();
-      // Konversi status 'pending' ke 'menunggu' agar sesuai dengan tab filter
-      final normalized = stat == 'pending' ? 'menunggu' : stat;
-      return normalized == status.toLowerCase();
-    }).toList();
-  }
-
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-      case 'menunggu': return Colors.orange;
-      case 'diproses': return Colors.blueAccent;
-      case 'dikirim': return Colors.purple;
-      case 'selesai': return Colors.green;
-      case 'dibatalkan': return Colors.red;
-      default: return Colors.grey;
-    }
-  }
-
-  List<String> _nextStatuses(String current) {
-    switch (current.toLowerCase()) {
-      case 'pending':
-      case 'menunggu': return ['Diproses', 'Dibatalkan'];
-      case 'diproses': return ['Dikirim'];
-      case 'dikirim': return ['Selesai'];
-      default: return [];
-    }
-  }
-
-  Future<void> _ubahStatus(Map<String, dynamic> pesanan, String newStatus) async {
-    final id = pesanan['id_pesanan']?.toString() ?? pesanan['id']?.toString();
-    if (id == null) return;
-
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-      // Gunakan 'status_pesanan' agar sesuai dengan payload controller backend
-      final res = await ApiClient.put('/pesanan/$id', {'status_pesanan': newStatus.toLowerCase()}, token: token);
-      if (res.statusCode == 200) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Status berhasil diubah ke $newStatus'), backgroundColor: AppColors.darkGreen),
-          );
-          _loadPesanan();
-        }
-      } else {
-        final errMsg = jsonDecode(res.body)['message'] ?? 'Gagal mengubah status';
-        throw Exception(errMsg);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<AdminPesananController>();
+
+    // Show feedback messages
+    if (controller.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(controller.errorMessage!), backgroundColor: Colors.redAccent),
+        );
+        controller.errorMessage = null;
+      });
+    }
+    if (controller.successMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(controller.successMessage!), backgroundColor: AppColors.darkGreen),
+        );
+        controller.successMessage = null;
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
       body: Column(
@@ -151,7 +95,7 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.white54,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  tabs: _statusTabs.map((s) => Tab(text: s)).toList(),
+                  tabs: controller.statusTabs.map((s) => Tab(text: s)).toList(),
                 ),
               ],
             ),
@@ -159,12 +103,12 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
 
           // Content
           Expanded(
-            child: _loading
+            child: controller.isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
                 : TabBarView(
                     controller: _tabController,
-                    children: _statusTabs.map((status) {
-                      final list = _filterByStatus(status);
+                    children: controller.statusTabs.map((status) {
+                      final list = controller.filterByStatus(status);
                       if (list.isEmpty) {
                         return Center(
                           child: Column(
@@ -178,12 +122,12 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
                         );
                       }
                       return RefreshIndicator(
-                        onRefresh: _loadPesanan,
+                        onRefresh: () async => controller.loadPesanan(_apotekId),
                         color: AppColors.darkGreen,
                         child: ListView.builder(
                           padding: const EdgeInsets.all(16),
                           itemCount: list.length,
-                          itemBuilder: (ctx, i) => _buildPesananCard(list[i]),
+                          itemBuilder: (ctx, i) => _buildPesananCard(controller, list[i]),
                         ),
                       );
                     }).toList(),
@@ -194,25 +138,13 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
     );
   }
 
-  Widget _buildPesananCard(Map<String, dynamic> p) {
-    // Ambil status_pesanan atau status. Konversi pending -> menunggu agar seragam
+  Widget _buildPesananCard(AdminPesananController controller, Map<String, dynamic> p) {
     final rawStatus = (p['status_pesanan'] ?? p['status'] ?? 'menunggu').toString();
-    final status = rawStatus.toLowerCase() == 'pending' ? 'menunggu' : rawStatus;
-
-    // Ambil nama pemesan dari join relasi users
-    final userMap = p['users'] as Map<String, dynamic>?;
-    final nama = userMap?['nama'] ?? p['nama_pemesan'] ?? p['nama'] ?? 'Pelanggan';
-
+    final status = controller.normalizeStatus(rawStatus);
+    final nama = controller.getCustomerName(p);
     final total = (p['total_harga'] as num? ?? 0).toDouble();
-    
-    // format tanggal
-    String tanggal = '-';
-    final dateRaw = p['tanggal_pesanan'] ?? p['created_at'];
-    if (dateRaw != null) {
-      tanggal = dateRaw.toString().substring(0, 10);
-    }
-    
-    final nextList = _nextStatuses(status);
+    final tanggal = controller.formatDate(p);
+    final nextList = controller.nextStatuses(status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -234,12 +166,12 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _statusColor(status).withOpacity(0.12),
+                  color: controller.statusColor(status).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   status[0].toUpperCase() + status.substring(1),
-                  style: TextStyle(color: _statusColor(status), fontWeight: FontWeight.bold, fontSize: 12),
+                  style: TextStyle(color: controller.statusColor(status), fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ),
             ],
@@ -257,7 +189,7 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Rp ${total.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+                'Rp ${controller.formatCurrency(total)}',
                 style: const TextStyle(color: Color(0xFF4299E1), fontWeight: FontWeight.bold, fontSize: 16),
               ),
               if (nextList.isNotEmpty)
@@ -274,7 +206,7 @@ class _AdminPesananPageState extends State<AdminPesananPage> with SingleTickerPr
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         elevation: 0,
                       ),
-                      onPressed: () => _ubahStatus(p, next),
+                      onPressed: () => controller.ubahStatus(p, next, _apotekId),
                       child: Text(next, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   )).toList(),

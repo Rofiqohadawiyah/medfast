@@ -1,122 +1,32 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../controllers/landing_controller.dart';
 import '../utils/colors.dart';
-import '../services/api_client.dart';
 import 'product_detail_page.dart';
 import 'main_screen.dart';
 import 'apotek_page.dart';
 import 'alamat_saya_page.dart';
 import 'keranjang_page.dart';
 
-class LandingPage extends StatefulWidget {
+class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
 
   @override
-  State<LandingPage> createState() => _LandingPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => LandingController(),
+      child: const _LandingPageUI(),
+    );
+  }
 }
 
-class _LandingPageState extends State<LandingPage> {
-  String _searchQuery = '';
-  String _locationName = 'Mendeteksi lokasi...';
-  bool _locationLoading = true;
-  Map<String, Map<String, dynamic>> _productApotekMap = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchLocation();
-    _loadProductApotekMap();
-  }
-
-  Future<void> _loadProductApotekMap() async {
-    try {
-      final apotekRes = await ApiClient.get('/apotek');
-      final stockRes = await ApiClient.get('/stok-obat');
-      if (apotekRes.statusCode == 200 && stockRes.statusCode == 200) {
-        final List<dynamic> apoteks = jsonDecode(apotekRes.body);
-        final List<dynamic> stocks = jsonDecode(stockRes.body);
-        
-        final newMap = <String, Map<String, dynamic>>{};
-        for (var stock in stocks) {
-          final idObat = stock['id_obat']?.toString();
-          final idApotek = stock['id_apotek']?.toString();
-          final stok = (stock['jumlah_stok'] ?? 0) as num;
-          // Only map to an apotek if it has stock > 0
-          if (idObat != null && idApotek != null && stok > 0) {
-            // Only override if not already mapped (first match = keep first)
-            if (!newMap.containsKey(idObat)) {
-              final matchApotek = apoteks.firstWhere(
-                (a) => a['id_apotek']?.toString() == idApotek,
-                orElse: () => null,
-              );
-              if (matchApotek != null) {
-                newMap[idObat] = matchApotek;
-              }
-            }
-          }
-        }
-        if (mounted) {
-          setState(() {
-            _productApotekMap = newMap;
-          });
-        }
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _fetchLocation() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) setState(() { _locationName = 'Izin lokasi ditolak'; _locationLoading = false; });
-        return;
-      }
-
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) setState(() { _locationName = 'GPS tidak aktif'; _locationLoading = false; });
-        return;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
-      );
-
-      // Reverse geocode pakai Nominatim — zoom=18 untuk dapat nama jalan detail
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.latitude}&lon=${pos.longitude}&zoom=18&addressdetails=1',
-      );
-      final response = await http.get(url, headers: {'Accept-Language': 'id', 'User-Agent': 'MedFastApp/1.0'});
-
-      if (response.statusCode == 200 && mounted) {
-        final data = jsonDecode(response.body);
-        final addr = data['address'] as Map<String, dynamic>? ?? {};
-
-        // Ambil nama jalan/dusun/desa
-        final road = (addr['road'] ?? addr['suburb'] ?? addr['village'] ?? addr['neighbourhood'] ?? '') as String;
-        final city = (addr['city'] ?? addr['town'] ?? addr['county'] ?? addr['municipality'] ?? '') as String;
-
-        // Gabungkan: jalan + kota
-        final parts = [road, city].where((e) => e.isNotEmpty).toList();
-        final locationLabel = parts.isNotEmpty ? parts.join(', ') : 'Lokasi tidak diketahui';
-
-        setState(() {
-          _locationName = locationLabel;
-          _locationLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() { _locationName = 'Gagal deteksi lokasi'; _locationLoading = false; });
-    }
-  }
+class _LandingPageUI extends StatelessWidget {
+  const _LandingPageUI({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<LandingController>();
+
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
       body: SingleChildScrollView(
@@ -141,21 +51,20 @@ class _LandingPageState extends State<LandingPage> {
                     children: [
                       const Icon(Icons.location_on, color: Colors.white, size: 18),
                       const SizedBox(width: 4),
-                      if (_locationLoading)
+                      if (controller.locationLoading)
                         const SizedBox(
                           width: 12, height: 12,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       else
                         Text(
-                          _locationName,
+                          controller.locationName,
                           style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                       const SizedBox(width: 4),
                       GestureDetector(
                         onTap: () {
-                          setState(() { _locationLoading = true; });
-                          _fetchLocation();
+                          controller.fetchLocation();
                         },
                         child: const Icon(Icons.refresh, color: Colors.white60, size: 16),
                       ),
@@ -197,7 +106,7 @@ class _LandingPageState extends State<LandingPage> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: TextField(
-                      onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                      onChanged: controller.onSearchChanged,
                       decoration: const InputDecoration(
                         icon: Icon(Icons.search, color: Colors.black26),
                         hintText: 'Cari obat...',
@@ -274,11 +183,11 @@ class _LandingPageState extends State<LandingPage> {
             const SizedBox(height: 24),
 
             // REKOMENDASI SECTION
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text(
                     'Rekomendasi',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -290,31 +199,23 @@ class _LandingPageState extends State<LandingPage> {
 
             const SizedBox(height: 16),
 
-            // PRODUCT GRID (Local API)
-            FutureBuilder<http.Response>(
-              future: ApiClient.get('/obat'),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            // PRODUCT GRID (Using Controller)
+            Builder(
+              builder: (context) {
+                if (controller.productsLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (snapshot.hasError || snapshot.data == null || snapshot.data!.statusCode != 200) {
-                  return const Center(
+                if (controller.errorMessage != null) {
+                  return Center(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 40),
-                      child: Text('Gagal memuat produk dari server lokal'),
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Text(controller.errorMessage!),
                     ),
                   );
                 }
 
-                final List<dynamic> products = jsonDecode(snapshot.data!.body);
-                
-                var filtered = products.where((p) {
-                  var name = (p['nama_obat'] ?? p['name'] ?? '').toString().toLowerCase();
-                  return name.contains(_searchQuery);
-                }).toList();
-
-                if (filtered.isEmpty) {
+                if (controller.filteredProducts.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 40),
                     child: Text('Obat tidak ditemukan'),
@@ -331,10 +232,10 @@ class _LandingPageState extends State<LandingPage> {
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
-                  itemCount: filtered.length,
+                  itemCount: controller.filteredProducts.length,
                   itemBuilder: (context, index) {
-                    var data = filtered[index] as Map<String, dynamic>;
-                    return _buildProductCard(data);
+                    var data = controller.filteredProducts[index] as Map<String, dynamic>;
+                    return _buildProductCard(context, data, controller.productApotekMap);
                   },
                 );
               },
@@ -346,7 +247,11 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
 
-  Widget _buildProductCard(Map<String, dynamic> product) {
+  Widget _buildProductCard(
+    BuildContext context, 
+    Map<String, dynamic> product,
+    Map<String, Map<String, dynamic>> productApotekMap,
+  ) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -399,7 +304,7 @@ class _LandingPageState extends State<LandingPage> {
                       const SizedBox(width: 2),
                       (() {
                         final idObat = (product['id_obat'] ?? product['id'] ?? '').toString();
-                        final apotek = _productApotekMap[idObat];
+                        final apotek = productApotekMap[idObat];
                         final String locationLabel;
                         if (apotek != null) {
                           final alamat = apotek['alamat']?.toString() ?? '';

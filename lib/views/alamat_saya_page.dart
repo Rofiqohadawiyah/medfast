@@ -1,78 +1,56 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
-import '../services/auth_service.dart';
-import '../services/api_client.dart';
+import '../controllers/alamat_saya_controller.dart';
 import '../utils/colors.dart';
 import 'pilih_alamat_page.dart';
 
-class AlamatSayaPage extends StatefulWidget {
+class AlamatSayaPage extends StatelessWidget {
   const AlamatSayaPage({super.key});
 
   @override
-  State<AlamatSayaPage> createState() => _AlamatSayaPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AlamatSayaController(),
+      child: const _AlamatSayaUI(),
+    );
+  }
 }
 
-class _AlamatSayaPageState extends State<AlamatSayaPage> {
-  bool _loading = false;
+class _AlamatSayaUI extends StatefulWidget {
+  const _AlamatSayaUI();
 
-  Future<void> _updateAlamatInBackend(BuildContext context, String newAddress) async {
-    setState(() => _loading = true);
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final user = authProvider.userModel;
-      if (user == null) return;
+  @override
+  State<_AlamatSayaUI> createState() => _AlamatSayaUIState();
+}
 
-      final authService = AuthService();
-      final token = await authService.token;
+class _AlamatSayaUIState extends State<_AlamatSayaUI> {
+  Future<void> _updateAlamat(BuildContext context, String newAddress) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.userModel;
+    if (user == null) return;
 
-      // Update di backend API menggunakan PUT /profile
-      final response = await ApiClient.put('/profile', {
-        'nama': user.name,
-        'no_hp': user.phone,
-        'alamat': newAddress,
-      }, token: token);
+    final controller = context.read<AlamatSayaController>();
+    final updatedUser = await controller.updateAlamat(user, newAddress);
 
-      if (response.statusCode == 200) {
-        // Parse updated user data directly from response
-        final responseBody = jsonDecode(response.body);
-        final updatedData = responseBody['data'];
-        final updatedUser = UserModel.fromJson(updatedData);
-
-        // Update local SharedPreferences cache
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_data', jsonEncode(updatedData));
-
-        // Update AuthProvider state
+    if (context.mounted) {
+      if (updatedUser != null) {
         authProvider.updateUserFromModel(updatedUser);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(newAddress.isEmpty ? 'Alamat berhasil dihapus!' : 'Alamat berhasil disimpan!'),
-              backgroundColor: AppColors.darkGreen,
-            ),
-          );
-        }
-      } else {
-        final msg = jsonDecode(response.body)['message'] ?? 'Gagal memperbarui alamat';
-        throw Exception(msg);
-      }
-    } catch (e) {
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal: ${e.toString()}'),
+            content: Text(controller.successMessage!),
+            backgroundColor: AppColors.darkGreen,
+          ),
+        );
+      } else if (controller.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(controller.errorMessage!),
             backgroundColor: Colors.redAccent,
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      controller.clearMessages();
     }
   }
 
@@ -84,7 +62,7 @@ class _AlamatSayaPageState extends State<AlamatSayaPage> {
 
     if (result != null && context.mounted) {
       final address = result['address'] as String;
-      await _updateAlamatInBackend(context, address);
+      await _updateAlamat(context, address);
     }
   }
 
@@ -105,19 +83,7 @@ class _AlamatSayaPageState extends State<AlamatSayaPage> {
     );
 
     if (confirm == true && context.mounted) {
-      await _updateAlamatInBackend(context, '');
-    }
-  }
-
-  Future<void> _editAlamat(BuildContext context) async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(builder: (_) => const PilihAlamatPage()),
-    );
-
-    if (result != null && context.mounted) {
-      final address = result['address'] as String;
-      await _updateAlamatInBackend(context, address);
+      await _updateAlamat(context, ''); // string kosong sebagai penanda hapus
     }
   }
 
@@ -125,7 +91,10 @@ class _AlamatSayaPageState extends State<AlamatSayaPage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.userModel;
+    final controller = context.watch<AlamatSayaController>();
+
     final address = user?.alamat ?? '';
+    final hasAddress = address.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
@@ -134,152 +103,196 @@ class _AlamatSayaPageState extends State<AlamatSayaPage> {
           // Header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 56, bottom: 24),
+            padding: const EdgeInsets.only(top: 56, bottom: 20),
             decoration: const BoxDecoration(
               color: AppColors.darkGreen,
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'Alamat Saya',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const Expanded(
+                  child: Text(
+                    'Alamat Saya',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 48),
-                ],
-              ),
+                ),
+                if (controller.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 20),
+                    child: SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    ),
+                  ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 20),
+          Expanded(
+            child: hasAddress
+                ? _buildAddressCard(context, address)
+                : _buildEmptyState(context),
+          ),
 
-          // Tombol Tambah Alamat (hanya muncul jika alamat masih kosong)
-          if (address.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+          // Tombol Tambah Alamat di Bawah
+          if (!hasAddress && !controller.isLoading)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -4)),
+                ],
+              ),
               child: SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.darkGreen,
-                    side: const BorderSide(color: AppColors.darkGreen, width: 1.5),
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkGreen,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  icon: const Icon(Icons.add_location_alt_outlined),
+                  onPressed: () => _tambahAlamat(context),
+                  icon: const Icon(Icons.add_location_alt, color: Colors.white),
                   label: const Text(
-                    '+ Tambah Alamat Baru',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    'Tambah Alamat Baru',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                  onPressed: _loading ? null : () => _tambahAlamat(context),
                 ),
               ),
             ),
-
-          const SizedBox(height: 16),
-
-          // Daftar Alamat dari Local API
-          Expanded(
-            child: _loading 
-              ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
-              : address.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.location_off, size: 64, color: Colors.black26),
-                        SizedBox(height: 12),
-                        Text(
-                          'Belum ada alamat tersimpan',
-                          style: TextStyle(color: Colors.black38, fontSize: 16),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Tap tombol di atas untuk menambah alamat',
-                          style: TextStyle(color: Colors.black26, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                color: AppColors.lightGreen,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.location_on, color: AppColors.darkGreen, size: 22),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Alamat Utama',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    address,
-                                    style: const TextStyle(color: Colors.black54, fontSize: 13, height: 1.5),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: AppColors.darkGreen, size: 22),
-                              tooltip: 'Edit Alamat',
-                              onPressed: _loading ? null : () => _editAlamat(context),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
-                              onPressed: _loading ? null : () => _hapusAlamat(context),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 16),
         ],
       ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+              ],
+            ),
+            child: const Icon(Icons.location_off_outlined, size: 64, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Belum ada alamat pengiriman',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Tambahkan alamat agar pesanan\nbisa diantar ke tempatmu.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddressCard(BuildContext context, String address) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Text(
+          'Alamat Utama',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.darkGreen, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.darkGreen.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(color: AppColors.lightGreen, borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.home, color: AppColors.darkGreen, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('Rumah', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(12)),
+                    child: const Text('Utama', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Divider(height: 1),
+              ),
+              Text(address, style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: const BorderSide(color: Colors.redAccent),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    onPressed: () => _hapusAlamat(context),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Hapus', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.darkGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    onPressed: () => _tambahAlamat(context),
+                    icon: const Icon(Icons.edit_location_alt_outlined, size: 16),
+                    label: const Text('Ubah', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

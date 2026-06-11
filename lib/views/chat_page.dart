@@ -1,16 +1,11 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:http_parser/http_parser.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
+import '../controllers/chat_controller.dart';
 import '../utils/colors.dart';
 
-class ChatPage extends StatefulWidget {
+class ChatPage extends StatelessWidget {
   final int chatId;
   final String roomName;
   final int idAdmin;
@@ -23,172 +18,92 @@ class ChatPage extends StatefulWidget {
   });
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ChatController(),
+      child: _ChatPageUI(
+        chatId: chatId,
+        roomName: roomName,
+        idAdmin: idAdmin,
+      ),
+    );
+  }
 }
 
-class _ChatPageState extends State<ChatPage> {
-  final List<dynamic> _messages = [];
+class _ChatPageUI extends StatefulWidget {
+  final int chatId;
+  final String roomName;
+  final int idAdmin;
+
+  const _ChatPageUI({
+    required this.chatId,
+    required this.roomName,
+    required this.idAdmin,
+  });
+
+  @override
+  State<_ChatPageUI> createState() => _ChatPageUIState();
+}
+
+class _ChatPageUIState extends State<_ChatPageUI> {
   final TextEditingController _msgController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
-  IO.Socket? _socket;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
-    _initSocket();
+    Future.microtask(() {
+      final controller = context.read<ChatController>();
+      controller.onMessagesUpdated = _scrollToBottom;
+      controller.initSocket(widget.chatId);
+      controller.loadMessages(widget.chatId);
+      controller.markAsRead(widget.chatId);
+    });
   }
 
   @override
   void dispose() {
-    _socket?.disconnect();
-    _socket?.dispose();
+    // Tandai sudah dibaca sebelum keluar
+    try {
+      final controller = context.read<ChatController>();
+      controller.markAsRead(widget.chatId);
+      controller.disposeSocket();
+    } catch (_) {}
     _msgController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _initSocket() {
-    final rawUrl = ApiClient.baseUrl;
-    final socketUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/api'));
-
-    _socket = IO.io(
-      socketUrl,
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .build(),
-    );
-
-    _socket!.connect();
-
-    _socket!.onConnect((_) {
-      debugPrint('Socket connected to server');
-      _socket!.emit('join_room', widget.chatId.toString());
-    });
-
-    _socket!.on('receive_message', (data) {
-      if (mounted) {
-        setState(() {
-          final idMsg = data['id_message'] ?? data['id'];
-          // Find if there is an existing match or matching optimistic message
-          final index = _messages.indexWhere((m) =>
-              ((m['id_message'] ?? m['id']) == idMsg) ||
-              (m['id_message'] == null &&
-                  m['pesan'] == data['pesan'] &&
-                  m['id_pengirim']?.toString() == data['id_pengirim']?.toString()));
-          if (index != -1) {
-            // Replace optimistic message with actual server message
-            _messages[index] = data;
-          } else {
-            _messages.add(data);
-          }
-        });
-        _scrollToBottom();
-      }
-    });
-
-    _socket!.onDisconnect((_) {
-      debugPrint('Socket disconnected');
-    });
-  }
-
-  Future<void> _loadMessages() async {
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-
-      final response = await ApiClient.get('/chat/messages/${widget.chatId}', token: token);
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        final List<dynamic> history = decoded['data'] ?? [];
-        if (mounted) {
-          setState(() {
-            _messages.clear();
-            _messages.addAll(history);
-            _isLoading = false;
-          });
-          _scrollToBottom();
-        }
-      } else {
-        throw Exception('Gagal memuat riwayat chat');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.redAccent),
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
         );
       }
-    }
+    });
   }
 
-  void _sendMessage() async {
+  void _sendMessage() {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
 
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
     if (user == null) return;
-
     final myId = int.tryParse(user.uid);
     if (myId == null) return;
 
     _msgController.clear();
+    final controller = context.read<ChatController>();
 
-    final payload = {
-      'id_chat': widget.chatId,
-      'id_pengirim': myId,
-      'pesan': text,
-    };
-
-    // Optimistic UI update
-    setState(() {
-      _messages.add({
-        'id_chat': widget.chatId,
-        'id_pengirim': myId,
-        'pesan': text,
-        'waktu_kirim': DateTime.now().toUtc().toIso8601String(),
-        'pengirim': {
-          'nama': user.name,
-          'role': user.role,
-        }
-      });
-    });
-    _scrollToBottom();
-
-    // Kirim pesan lewat HTTP POST agar terjamin masuk database Supabase
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-      
-      final response = await ApiClient.post('/chat/message', payload, token: token);
-      if (response.statusCode != 201) {
-        throw Exception('Server mengembalikan status ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Gagal mengirim pesan ke server: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengirim pesan: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    }
-  }
-
-  bool _isImageUrl(String text) {
-    return text.startsWith('http') && (
-      text.contains('.png') ||
-      text.contains('.jpg') ||
-      text.contains('.jpeg') ||
-      text.contains('.webp') ||
-      text.contains('.gif') ||
-      text.contains('/storage/v1/object/public/') ||
-      text.contains('chat_images')
+    controller.sendMessage(
+      chatId: widget.chatId,
+      text: text,
+      myId: myId,
+      userName: user.name,
+      userRole: user.role,
     );
   }
 
@@ -238,323 +153,178 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Future<void> _pickAndUploadImage(ImageSource source) async {
+  void _pickAndUploadImage(ImageSource source) {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
     final myId = int.tryParse(user?.uid ?? '');
     if (myId == null) return;
 
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
+    final controller = context.read<ChatController>();
+    controller.pickAndUploadImage(
       source: source,
-      imageQuality: 70,
+      chatId: widget.chatId,
+      myId: myId,
+      userName: user?.name,
+      userRole: user?.role,
     );
-
-    if (pickedFile == null) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final authService = AuthService();
-      final token = await authService.token;
-
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${ApiClient.baseUrl}/chat/upload'),
-      );
-
-      if (token != null) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      final ext = pickedFile.path.split('.').last.toLowerCase();
-      final mimeSubtype = (ext == 'jpg' || ext == 'jpeg') ? 'jpeg' : ext;
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'gambar',
-          pickedFile.path,
-          contentType: MediaType('image', mimeSubtype),
-        ),
-      );
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        final imageUrl = decoded['url'];
-
-        if (imageUrl != null) {
-          final payload = {
-            'id_chat': widget.chatId,
-            'id_pengirim': myId,
-            'pesan': imageUrl,
-          };
-
-          _socket?.emit('send_message', payload);
-
-          setState(() {
-            _messages.add({
-              'id_chat': widget.chatId,
-              'id_pengirim': myId,
-              'pesan': imageUrl,
-              'waktu_kirim': DateTime.now().toUtc().toIso8601String(),
-              'pengirim': {
-                'nama': user?.name,
-                'role': user?.role,
-              }
-            });
-          });
-          _scrollToBottom();
-        }
-      } else {
-        String serverError = 'Gagal mengunggah gambar ke server';
-        try {
-          final errBody = jsonDecode(response.body);
-          if (errBody != null && errBody['message'] != null) {
-            serverError = errBody['message'];
-          }
-        } catch (_) {}
-        throw Exception(serverError);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error upload: ${e.toString()}'), backgroundColor: Colors.redAccent),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+    final controller = context.watch<ChatController>();
+
+    if (controller.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(controller.errorMessage!), backgroundColor: Colors.redAccent),
+        );
+        controller.errorMessage = null; // reset
+      });
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB), // Light grey/blue background from design
+      backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
         children: [
-          // Forest green curved header
-          Container(
-            height: 120,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFF3F5E53),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-            ),
-            padding: const EdgeInsets.only(top: 40, left: 12, right: 16),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.roomName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF50D199),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Online',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Chat messages area
+          _buildHeader(context),
           Expanded(
-            child: _isLoading
+            child: controller.isLoading
                 ? const Center(child: CircularProgressIndicator(color: Color(0xFF3F5E53)))
-                : _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.chat_outlined, size: 70, color: Colors.black26),
-                            SizedBox(height: 12),
-                            Text('Mulai obrolan Anda sekarang', style: TextStyle(color: Colors.black45)),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = _messages[index];
-                          final text = msg['pesan'] ?? '';
-                          final timeStr = _formatTime(msg['waktu_kirim']);
-
-                          final senderId = msg['id_pengirim']?.toString();
-                          final myId = user?.uid;
-                          final bool isOnRightSide = (senderId != null && myId != null && senderId == myId);
-
-                          bool showDayHeader = false;
-                          String dayHeaderText = '';
-                          if (index == 0) {
-                            showDayHeader = true;
-                            dayHeaderText = _getDayHeader(msg['waktu_kirim']);
-                          } else {
-                            final prevMsg = _messages[index - 1];
-                            final currentDay = _getDayHeader(msg['waktu_kirim']);
-                            final prevDay = _getDayHeader(prevMsg['waktu_kirim']);
-                            if (currentDay != prevDay) {
-                              showDayHeader = true;
-                              dayHeaderText = currentDay;
-                            }
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (showDayHeader && dayHeaderText.isNotEmpty)
-                                Center(
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(vertical: 16),
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEAF0F6), // Light blueish/grey pill
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Text(
-                                      dayHeaderText,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black45,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              _buildChatBubble(text, isOnRightSide, timeStr),
-                            ],
-                          );
-                        },
-                      ),
+                : controller.messages.isEmpty
+                    ? _buildEmptyState()
+                    : _buildMessageList(controller, user),
           ),
+          _buildMessageInput(context),
+        ],
+      ),
+    );
+  }
 
-          // Message input bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.white,
-            child: SafeArea(
-              child: Row(
+  /// Header bar with room name and online status.
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xFF3F5E53),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      padding: const EdgeInsets.only(top: 40, left: 12, right: 16),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                widget.roomName,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+              ),
+              const SizedBox(height: 4),
+              Row(
                 children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.black.withOpacity(0.08), width: 1.0),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.image_outlined, color: Colors.black38, size: 24),
-                            onPressed: () => _showImageSourceActionSheet(context),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _msgController,
-                              style: const TextStyle(fontSize: 15, color: Color(0xFF1E3A2F)),
-                              decoration: const InputDecoration(
-                                hintText: 'Tulis pesan...',
-                                hintStyle: TextStyle(color: Colors.black26, fontSize: 15),
-                                border: InputBorder.none,
-                              ),
-                              onSubmitted: (_) => _sendMessage(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  Container(
+                    width: 8, height: 8,
+                    decoration: const BoxDecoration(color: Color(0xFF50D199), shape: BoxShape.circle),
                   ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: _sendMessage,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8F9FB),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black.withOpacity(0.05), width: 1.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.send,
-                        color: Color(0xFF3F5E53),
-                        size: 20,
-                      ),
-                    ),
-                  ),
+                  const SizedBox(width: 6),
+                  const Text('Online', style: TextStyle(fontSize: 12, color: Colors.white70)),
                 ],
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  /// Empty state when there are no messages yet.
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.chat_outlined, size: 70, color: Colors.black26),
+          SizedBox(height: 12),
+          Text('Mulai obrolan Anda sekarang', style: TextStyle(color: Colors.black45)),
+        ],
+      ),
+    );
+  }
+
+  /// The scrollable list of chat messages.
+  Widget _buildMessageList(ChatController controller, dynamic user) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: controller.messages.length,
+      itemBuilder: (context, index) {
+        final msg = controller.messages[index];
+        final text = msg['pesan'] ?? '';
+        final timeStr = controller.formatTime(msg['waktu_kirim']);
+
+        final senderId = msg['id_pengirim']?.toString();
+        final myId = user?.uid;
+        final bool isOnRightSide = (senderId != null && myId != null && senderId == myId);
+
+        bool showDayHeader = false;
+        String dayHeaderText = '';
+        if (index == 0) {
+          showDayHeader = true;
+          dayHeaderText = controller.getDayHeader(msg['waktu_kirim']);
+        } else {
+          final prevMsg = controller.messages[index - 1];
+          final currentDay = controller.getDayHeader(msg['waktu_kirim']);
+          final prevDay = controller.getDayHeader(prevMsg['waktu_kirim']);
+          if (currentDay != prevDay) {
+            showDayHeader = true;
+            dayHeaderText = currentDay;
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showDayHeader && dayHeaderText.isNotEmpty)
+              _buildDayHeader(dayHeaderText),
+            _buildChatBubble(text, isOnRightSide, timeStr),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Day separator header (e.g. "Hari Ini", "Kemarin").
+  Widget _buildDayHeader(String text) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF0F6),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 12, color: Colors.black45, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  /// Individual chat bubble widget.
   Widget _buildChatBubble(String text, bool isOnRightSide, String time) {
-    final bool isImage = _isImageUrl(text);
+    final controller = context.read<ChatController>();
+    final bool isImage = controller.isImageUrl(text);
+
     return Align(
       alignment: isOnRightSide ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -567,16 +337,15 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: isOnRightSide ? const Color(0xFF3F5E53) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: isOnRightSide
-                    ? null
-                    : Border.all(color: Colors.black.withOpacity(0.05), width: 1.0),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: isOnRightSide ? const Radius.circular(20) : const Radius.circular(0),
+                  bottomRight: isOnRightSide ? const Radius.circular(0) : const Radius.circular(20),
+                ),
+                border: isOnRightSide ? null : Border.all(color: Colors.black.withOpacity(0.05), width: 1.0),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
+                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
                 ],
               ),
               child: isImage
@@ -587,28 +356,14 @@ class _ChatPageState extends State<ChatPage> {
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
-                          return const SizedBox(
-                            width: 150,
-                            height: 150,
-                            child: Center(
-                              child: CircularProgressIndicator(color: Color(0xFF3F5E53)),
-                            ),
-                          );
+                          return const SizedBox(width: 150, height: 150, child: Center(child: CircularProgressIndicator(color: Color(0xFF3F5E53))));
                         },
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                          Icons.broken_image,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 50, color: Colors.grey),
                       ),
                     )
                   : Text(
                       text,
-                      style: TextStyle(
-                        color: isOnRightSide ? Colors.white : const Color(0xFF1E3A2F),
-                        fontSize: 15,
-                        height: 1.4,
-                      ),
+                      style: TextStyle(color: isOnRightSide ? Colors.white : const Color(0xFF1E3A2F), fontSize: 15, height: 1.4),
                     ),
             ),
             const SizedBox(height: 4),
@@ -618,22 +373,12 @@ class _ChatPageState extends State<ChatPage> {
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          time,
-                          style: const TextStyle(fontSize: 11, color: Colors.black38),
-                        ),
+                        Text(time, style: const TextStyle(fontSize: 11, color: Colors.black38)),
                         const SizedBox(width: 4),
-                        const Icon(
-                          Icons.done_all,
-                          size: 14,
-                          color: Color(0xFF3F5E53),
-                        ),
+                        const Icon(Icons.done_all, size: 14, color: Color(0xFF3F5E53)),
                       ],
                     )
-                  : Text(
-                      time,
-                      style: const TextStyle(fontSize: 11, color: Colors.black38),
-                    ),
+                  : Text(time, style: const TextStyle(fontSize: 11, color: Colors.black38)),
             ),
           ],
         ),
@@ -641,48 +386,66 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  String _formatTime(String? isoString) {
-    if (isoString == null) return '';
-    try {
-      String cleanStr = isoString.trim();
-      if (!cleanStr.endsWith('Z') && !cleanStr.contains('+') && !cleanStr.contains(RegExp(r'-\d{2}:\d{2}'))) {
-        cleanStr = cleanStr.replaceAll(' ', 'T');
-        cleanStr = '${cleanStr}Z';
-      }
-      final date = DateTime.parse(cleanStr).toLocal();
-      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  String _getDayHeader(String? isoString) {
-    if (isoString == null) return '';
-    try {
-      String cleanStr = isoString.trim();
-      if (!cleanStr.endsWith('Z') && !cleanStr.contains('+') && !cleanStr.contains(RegExp(r'-\d{2}:\d{2}'))) {
-        cleanStr = cleanStr.replaceAll(' ', 'T');
-        cleanStr = '${cleanStr}Z';
-      }
-      final date = DateTime.parse(cleanStr).toLocal();
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final yesterday = today.subtract(const Duration(days: 1));
-      final msgDay = DateTime(date.year, date.month, date.day);
-
-      if (msgDay == today) {
-        return 'Hari Ini';
-      } else if (msgDay == yesterday) {
-        return 'Kemarin';
-      } else {
-        final months = [
-          'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-          'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-        ];
-        return '${date.day} ${months[date.month - 1]} ${date.year}';
-      }
-    } catch (_) {
-      return '';
-    }
+  /// Bottom message input bar with image picker and send button.
+  Widget _buildMessageInput(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: Colors.white,
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.black.withOpacity(0.08), width: 1.0),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.image_outlined, color: Colors.black38, size: 24),
+                      onPressed: () => _showImageSourceActionSheet(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _msgController,
+                        style: const TextStyle(fontSize: 15, color: Color(0xFF1E3A2F)),
+                        decoration: const InputDecoration(
+                          hintText: 'Tulis pesan...',
+                          hintStyle: TextStyle(color: Colors.black26, fontSize: 15),
+                          border: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: _sendMessage,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FB),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black.withOpacity(0.05), width: 1.0),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))
+                  ],
+                ),
+                child: const Icon(Icons.send, color: Color(0xFF3F5E53), size: 20),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

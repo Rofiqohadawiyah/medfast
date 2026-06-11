@@ -1,32 +1,42 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../controllers/pilih_alamat_controller.dart';
 import '../utils/colors.dart';
 
-class PilihAlamatPage extends StatefulWidget {
+class PilihAlamatPage extends StatelessWidget {
   const PilihAlamatPage({super.key});
 
   @override
-  State<PilihAlamatPage> createState() => _PilihAlamatPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => PilihAlamatController(),
+      child: const _PilihAlamatUI(),
+    );
+  }
 }
 
-class _PilihAlamatPageState extends State<PilihAlamatPage> {
+class _PilihAlamatUI extends StatefulWidget {
+  const _PilihAlamatUI();
+
+  @override
+  State<_PilihAlamatUI> createState() => _PilihAlamatUIState();
+}
+
+class _PilihAlamatUIState extends State<_PilihAlamatUI> {
   final MapController _mapController = MapController();
-  LatLng _selectedPoint = const LatLng(-8.1647, 113.7152); // Default Jember
-  String _selectedAddress = 'Ketuk peta untuk memilih lokasi...';
-  bool _isLoadingAddress = false;
-  bool _isLoadingLocation = false;
-  
   final TextEditingController _searchCtrl = TextEditingController();
-  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
-    _goToCurrentLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PilihAlamatController>().goToCurrentLocation().then((_) {
+        final ctrl = context.read<PilihAlamatController>();
+        _mapController.move(ctrl.selectedPoint, 16);
+      });
+    });
   }
 
   @override
@@ -35,129 +45,19 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
     super.dispose();
   }
 
-  Future<void> _goToCurrentLocation() async {
-    setState(() => _isLoadingLocation = true);
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.deniedForever) {
-        setState(() => _isLoadingLocation = false);
-        return;
-      }
-
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() => _isLoadingLocation = false);
-        return;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-      final point = LatLng(pos.latitude, pos.longitude);
-
-      if (mounted) {
-        setState(() {
-          _selectedPoint = point;
-          _isLoadingLocation = false;
-        });
-        _mapController.move(point, 16);
-        _reverseGeocode(point);
-      }
-    } catch (e) {
-      setState(() => _isLoadingLocation = false);
-    }
-  }
-
-  Future<void> _searchAddress(String query) async {
-    if (query.trim().isEmpty) return;
-    setState(() => _isSearching = true);
-    try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&limit=5&addressdetails=1',
-      );
-      final response = await http.get(url, headers: {
-        'Accept-Language': 'id',
-        'User-Agent': 'MedFastApp/1.0',
-      });
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        if (data.isNotEmpty) {
-          final first = data[0];
-          final lat = double.parse(first['lat']);
-          final lon = double.parse(first['lon']);
-          final displayName = first['display_name'] ?? 'Lokasi terpilih';
-          
-          final point = LatLng(lat, lon);
-          if (mounted) {
-            setState(() {
-              _selectedPoint = point;
-              _selectedAddress = displayName;
-              _isSearching = false;
-            });
-            _mapController.move(point, 16);
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Lokasi tidak ditemukan')),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Search error: $e");
-    } finally {
-      if (mounted) {
-        setState(() => _isSearching = false);
-      }
-    }
-  }
-
-  Future<void> _reverseGeocode(LatLng point) async {
-    setState(() {
-      _isLoadingAddress = true;
-      _selectedAddress = 'Mengambil nama jalan...';
-    });
-    try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${point.latitude}&lon=${point.longitude}&zoom=18&addressdetails=1',
-      );
-      final response = await http.get(url, headers: {
-        'Accept-Language': 'id',
-        'User-Agent': 'MedFastApp/1.0',
-      });
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final address = data['display_name'] ?? 'Alamat tidak ditemukan';
-        if (mounted) {
-          setState(() {
-            _selectedAddress = address;
-            _isLoadingAddress = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _selectedAddress = 'Gagal mengambil alamat. Coba lagi.';
-          _isLoadingAddress = false;
-        });
-      }
-    }
-  }
-
-  void _onMapTap(TapPosition tapPosition, LatLng point) {
-    setState(() {
-      _selectedPoint = point;
-    });
-    _reverseGeocode(point);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<PilihAlamatController>();
+
+    if (controller.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(controller.errorMessage!)),
+        );
+        controller.clearError();
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
       body: Column(
@@ -189,7 +89,7 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                     ),
                   ),
                 ),
-                if (_isLoadingLocation)
+                if (controller.isLoadingLocation)
                   const SizedBox(
                     width: 20,
                     height: 20,
@@ -207,9 +107,9 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                 FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _selectedPoint,
+                    initialCenter: controller.selectedPoint,
                     initialZoom: 15,
-                    onTap: _onMapTap,
+                    onTap: (tapPosition, point) => controller.onMapTap(point),
                   ),
                   children: [
                     TileLayer(
@@ -219,7 +119,7 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                     MarkerLayer(
                       markers: [
                         Marker(
-                          point: _selectedPoint,
+                          point: controller.selectedPoint,
                           width: 50,
                           height: 60,
                           child: const Column(
@@ -249,12 +149,17 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                     child: TextField(
                       controller: _searchCtrl,
                       textInputAction: TextInputAction.search,
-                      onSubmitted: _searchAddress,
+                      onSubmitted: (query) async {
+                        final point = await controller.searchAddress(query);
+                        if (point != null) {
+                          _mapController.move(point, 16);
+                        }
+                      },
                       decoration: InputDecoration(
                         hintText: 'Cari nama tempat / jalan...',
                         hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
                         prefixIcon: const Icon(Icons.search, color: AppColors.darkGreen),
-                        suffixIcon: _isSearching
+                        suffixIcon: controller.isSearching
                             ? const Padding(
                                 padding: EdgeInsets.all(12.0),
                                 child: SizedBox(
@@ -288,7 +193,10 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                   right: 16,
                   child: FloatingActionButton.small(
                     backgroundColor: Colors.white,
-                    onPressed: _goToCurrentLocation,
+                    onPressed: () async {
+                       await controller.goToCurrentLocation();
+                       _mapController.move(controller.selectedPoint, 16);
+                    },
                     child: const Icon(Icons.my_location, color: AppColors.darkGreen),
                   ),
                 ),
@@ -341,7 +249,7 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                     const Icon(Icons.location_on, color: AppColors.darkGreen, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: _isLoadingAddress
+                      child: controller.isLoadingAddress
                           ? const Row(
                               children: [
                                 SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
@@ -350,7 +258,7 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                               ],
                             )
                           : Text(
-                              _selectedAddress,
+                              controller.selectedAddress,
                               style: const TextStyle(fontSize: 15, height: 1.4, color: Colors.black87),
                             ),
                     ),
@@ -366,14 +274,14 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 0,
                     ),
-                    onPressed: _isLoadingAddress
+                    onPressed: controller.isLoadingAddress
                         ? null
                         : () {
                             // Kembalikan alamat ke halaman sebelumnya
                             Navigator.pop(context, {
-                              'address': _selectedAddress,
-                              'latitude': _selectedPoint.latitude,
-                              'longitude': _selectedPoint.longitude,
+                              'address': controller.selectedAddress,
+                              'latitude': controller.selectedPoint.latitude,
+                              'longitude': controller.selectedPoint.longitude,
                             });
                           },
                     child: const Text(

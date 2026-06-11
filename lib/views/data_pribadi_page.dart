@@ -1,25 +1,32 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
+import '../controllers/data_pribadi_controller.dart';
 import '../utils/colors.dart';
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
 
-class DataPribadiPage extends StatefulWidget {
+class DataPribadiPage extends StatelessWidget {
   const DataPribadiPage({super.key});
 
   @override
-  State<DataPribadiPage> createState() => _DataPribadiPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => DataPribadiController(),
+      child: const _DataPribadiUI(),
+    );
+  }
 }
 
-class _DataPribadiPageState extends State<DataPribadiPage> {
+class _DataPribadiUI extends StatefulWidget {
+  const _DataPribadiUI();
+
+  @override
+  State<_DataPribadiUI> createState() => _DataPribadiUIState();
+}
+
+class _DataPribadiUIState extends State<_DataPribadiUI> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -49,160 +56,141 @@ class _DataPribadiPageState extends State<DataPribadiPage> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    final controller = context.read<DataPribadiController>();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.userModel;
+    if (user == null) return;
 
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final authService = AuthService();
-      final token = await authService.token;
+    final updatedUser = await controller.updateProfile(user, name, phone);
 
-      final response = await ApiClient.put(
-        '/profile',
-        {
-          'nama': name,
-          'no_hp': phone,
-        },
-        token: token,
-      );
-
-      if (response.statusCode == 200) {
-        // Parse updated user data directly from response
-        final responseBody = jsonDecode(response.body);
-        final updatedData = responseBody['data'];
-        final updatedUser = UserModel.fromJson(updatedData);
-
-        // Update local SharedPreferences cache
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_data', jsonEncode(updatedData));
-
-        // Update AuthProvider state
+    if (context.mounted) {
+      if (updatedUser != null) {
         authProvider.updateUserFromModel(updatedUser);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profil berhasil diperbarui')),
-          );
-          Navigator.pop(context);
-        }
-      } else {
-        final errorMsg = jsonDecode(response.body)['message'] ?? 'Gagal memperbarui profil';
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Koneksi bermasalah: $e')),
+          SnackBar(content: Text(controller.successMessage!), backgroundColor: AppColors.darkGreen),
+        );
+        Navigator.pop(context);
+      } else if (controller.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(controller.errorMessage!), backgroundColor: Colors.redAccent),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      controller.clearMessages();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<DataPribadiController>();
+
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.only(top: 60, bottom: 40),
-              decoration: const BoxDecoration(
-                color: AppColors.darkGreen,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const Expanded(
-                          child: Center(
-                            child: Text(
-                              'Data Pribadi',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 48), // Balance for back button
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.person, size: 70, color: Colors.black26),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _nameController.text,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+      body: Column(
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 60, bottom: 30),
+            decoration: const BoxDecoration(
+              color: AppColors.darkGreen,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
               ),
             ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Text(
+                        'Data Pribadi',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 48), // Balance for back button
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Avatar Frame
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.lightGreen, width: 4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      const Center(
+                        child: Icon(Icons.person, size: 50, color: Colors.black26),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: AppColors.darkGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-            const SizedBox(height: 30),
+          const SizedBox(height: 30),
 
-            // Form
-            Padding(
+          // Form
+          Expanded(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  _buildEditField(
-                    label: 'Nama lengkap',
-                    controller: _nameController,
+                  _buildInputField(
+                    label: 'Nama Lengkap',
                     icon: Icons.person_outline,
+                    controller: _nameController,
                   ),
-                  const SizedBox(height: 16),
-                  _buildEditField(
+                  const SizedBox(height: 20),
+                  _buildInputField(
                     label: 'Nomor Handphone',
-                    controller: _phoneController,
                     icon: Icons.phone_android_outlined,
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
                   ),
-                  const SizedBox(height: 16),
-                  _buildEditField(
-                    label: 'Email (Tidak dapat diubah)',
+                  const SizedBox(height: 20),
+                  _buildInputField(
+                    label: 'Email',
+                    icon: Icons.email_outlined,
                     controller: _emailController,
-                    icon: Icons.mail_outline,
                     enabled: false,
+                    keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 40),
-                  
-                  // Submit Button
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -212,14 +200,19 @@ class _DataPribadiPageState extends State<DataPribadiPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
+                        elevation: 0,
                       ),
-                      onPressed: _isLoading ? null : _handleSave,
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
+                      onPressed: controller.isLoading ? null : _handleSave,
+                      child: controller.isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
                           : const Text(
                               'Simpan Perubahan',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
@@ -229,55 +222,61 @@ class _DataPribadiPageState extends State<DataPribadiPage> {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEditField({
+  Widget _buildInputField({
     required String label,
-    required TextEditingController controller,
     required IconData icon,
+    required TextEditingController controller,
     bool enabled = true,
+    TextInputType keyboardType = TextInputType.text,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.black45, fontSize: 14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
           ),
-          Row(
-            children: [
-              Icon(icon, color: AppColors.darkGreen, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  enabled: enabled,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: enabled ? Colors.black87 : Colors.black38,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: enabled ? Colors.white : Colors.grey[200],
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              if (enabled)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-              if (enabled) const Icon(Icons.edit_outlined, color: Colors.black45, size: 20),
             ],
           ),
-        ],
-      ),
+          child: TextField(
+            controller: controller,
+            enabled: enabled,
+            keyboardType: keyboardType,
+            style: TextStyle(
+              fontSize: 16,
+              color: enabled ? Colors.black87 : Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: Icon(icon, color: enabled ? AppColors.darkGreen : Colors.black38),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
