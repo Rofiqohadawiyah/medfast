@@ -18,6 +18,7 @@ class KeranjangController extends ChangeNotifier {
   Future<Map<String, dynamic>?> prosesCheckout({
     required CartProvider cartProvider,
     required String userAddress,
+    List<int>? selectedCartIds,
   }) async {
     if (cartProvider.cartItems.isEmpty) return null;
 
@@ -47,7 +48,18 @@ class KeranjangController extends ChangeNotifier {
         }
       } catch (_) {}
 
-      final detailItems = cartProvider.cartItems.map((item) {
+      final itemsToCheckout = selectedCartIds != null
+          ? cartProvider.cartItems.where((item) {
+              final idKeranjang = (item['id_keranjang'] as num).toInt();
+              return selectedCartIds.contains(idKeranjang);
+            }).toList()
+          : cartProvider.cartItems;
+
+      if (itemsToCheckout.isEmpty) {
+        throw Exception('Tidak ada barang terpilih untuk checkout');
+      }
+
+      final detailItems = itemsToCheckout.map((item) {
         final obat = item['obat'] as Map<String, dynamic>? ?? {};
         final price = (obat['harga'] ?? obat['price'] ?? 0) as num;
         return {
@@ -57,7 +69,17 @@ class KeranjangController extends ChangeNotifier {
         };
       }).toList();
 
-      final totalHarga = cartProvider.totalHarga + 10000; // Flat ongkir
+      double calculatedTotal = 0;
+      for (var item in itemsToCheckout) {
+        final qty = (item['jumlah'] as num? ?? 0).toDouble();
+        final obat = item['obat'] as Map<String, dynamic>?;
+        if (obat != null) {
+          final price = (obat['harga'] ?? obat['price'] ?? 0) as num;
+          calculatedTotal += qty * price.toDouble();
+        }
+      }
+
+      final totalHarga = calculatedTotal + 10000; // Flat ongkir
 
       final pesananRes = await ApiClient.post('/pesanan', {
         'id_apotek': idApotek,
@@ -82,7 +104,13 @@ class KeranjangController extends ChangeNotifier {
           'status_pengiriman': 'pending',
         }, token: token);
 
-        await cartProvider.clearCart();
+        if (selectedCartIds == null || selectedCartIds.length == cartProvider.cartItems.length) {
+          await cartProvider.clearCart();
+        } else {
+          for (var id in selectedCartIds) {
+            await cartProvider.deleteItem(id);
+          }
+        }
 
         if (paymentMethod == 'Midtrans') {
           final paymentService = PaymentService();

@@ -132,59 +132,61 @@ class _AdminProdukPageUI extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 32),
-            decoration: const BoxDecoration(
+      body: controller.loading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
+          : RefreshIndicator(
+              onRefresh: () => controller.loadProducts(user?.pharmacyId),
               color: AppColors.darkGreen,
-              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'MedFast Admin',
-                      style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  // Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 32),
+                    decoration: const BoxDecoration(
+                      color: AppColors.darkGreen,
+                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
                     ),
-                    Icon(Icons.notifications_none_outlined, color: Colors.white, size: 22),
-                  ],
-                ),
-                const SizedBox(height: 36),
-                const Text(
-                  'Tambah Obat Baru',
-                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Masukkan detail informasi obat dengan\nlengkap.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-                ),
-              ],
-            ),
-          ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'MedFast Admin',
+                              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                            ),
+                            Icon(Icons.notifications_none_outlined, color: Colors.white, size: 22),
+                          ],
+                        ),
+                        const SizedBox(height: 36),
+                        const Text(
+                          'Kelola Produk',
+                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Cari, tambah, edit, atau hapus produk apotek kamu.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
 
-          // List & Content
-          Expanded(
-            child: controller.loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
-                : RefreshIndicator(
-                    onRefresh: () => controller.loadProducts(user?.pharmacyId),
-                    color: AppColors.darkGreen,
-                    child: ListView(
-                      padding: const EdgeInsets.all(20),
+                  // List & Content
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (controller.errorMessage != null)
-                           Padding(
-                             padding: const EdgeInsets.only(bottom: 16),
-                             child: Text(controller.errorMessage!, style: const TextStyle(color: Colors.red)),
-                           ),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(controller.errorMessage!, style: const TextStyle(color: Colors.red)),
+                          ),
                         // Tambah Obat Button
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
@@ -253,9 +255,9 @@ class _AdminProdukPageUI extends StatelessWidget {
                       ],
                     ),
                   ),
-          ),
-        ],
-      ),
+                ],
+              ),
+            ),
     );
   }
 

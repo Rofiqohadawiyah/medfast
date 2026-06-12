@@ -25,9 +25,27 @@ class AdminPesananController extends ChangeNotifier {
         final all = jsonDecode(res.body) as List<dynamic>;
 
         // Filter di-sisi client juga sebagai fallback, meskipun backend sudah menyaringnya
-        pesanan = apotekId != null
+        final filtered = apotekId != null
             ? all.where((p) => p['id_apotek']?.toString() == apotekId).toList()
             : all;
+
+        // Fetch detail of each order in parallel to populate detail_pesanan
+        final futures = filtered.map((o) async {
+          final idPesanan = o['id_pesanan'];
+          if (idPesanan != null) {
+            try {
+              final detailResponse = await ApiClient.get('/pesanan/$idPesanan', token: token);
+              if (detailResponse.statusCode == 200) {
+                return jsonDecode(detailResponse.body);
+              }
+            } catch (e) {
+              debugPrint('Error fetching detail for order $idPesanan: $e');
+            }
+          }
+          return o;
+        }).toList();
+
+        pesanan = await Future.wait(futures);
       } else {
         errorMessage = 'Gagal memuat pesanan';
       }

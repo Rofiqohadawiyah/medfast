@@ -75,7 +75,25 @@ class PesananController extends ChangeNotifier {
 
       final response = await ApiClient.get('/pesanan', token: token);
       if (response.statusCode == 200) {
-        orders = jsonDecode(response.body);
+        final List<dynamic> rawOrders = jsonDecode(response.body);
+        
+        // Fetch details in parallel to populate detail_pesanan
+        final futures = rawOrders.map((o) async {
+          final idPesanan = o['id_pesanan'];
+          if (idPesanan != null) {
+            try {
+              final detailResponse = await ApiClient.get('/pesanan/$idPesanan', token: token);
+              if (detailResponse.statusCode == 200) {
+                return jsonDecode(detailResponse.body);
+              }
+            } catch (e) {
+              debugPrint('Error fetching detail for order $idPesanan: $e');
+            }
+          }
+          return o;
+        }).toList();
+
+        orders = await Future.wait(futures);
       } else {
         errorMessage = 'Gagal mengambil data pesanan';
       }
