@@ -86,6 +86,9 @@ class _PesananPageUIState extends State<_PesananPageUI> {
     final Map<String, dynamic> pengiriman = (detail['pengiriman'] is List && (detail['pengiriman'] as List).isNotEmpty)
         ? (detail['pengiriman'][0] as Map<String, dynamic>? ?? {})
         : (detail['pengiriman'] is Map ? (detail['pengiriman'] as Map<String, dynamic>) : {});
+    final Map<String, dynamic> userMap = detail['users'] is Map
+        ? (detail['users'] as Map<String, dynamic>)
+        : {};
     final status = detail['status_pesanan'] ?? 'menunggu';
 
     showModalBottomSheet(
@@ -154,7 +157,16 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Metode Pembayaran', style: TextStyle(fontSize: 14, color: Colors.black54)),
-                    Text(pembayaran['metode_pembayaran'] ?? '-', style: const TextStyle(fontWeight: FontWeight.w500)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        pembayaran['metode_pembayaran'] == 'Midtrans'
+                            ? 'Transfer Bank / E-Wallet (Midtrans)'
+                            : (pembayaran['metode_pembayaran'] ?? '-'),
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
                   ],
                 ),
                 Row(
@@ -162,10 +174,10 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                   children: [
                     const Text('Status Pembayaran', style: TextStyle(fontSize: 14, color: Colors.black54)),
                     Text(
-                      pembayaran['status_pembayaran'] == 'lunas' ? 'Lunas' : 'Belum Bayar',
+                      (pembayaran['status_pembayaran'] == 'lunas' || pembayaran['status_pembayaran'] == 'berhasil') ? 'Lunas' : 'Belum Bayar',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: pembayaran['status_pembayaran'] == 'lunas' ? Colors.green : Colors.orange,
+                        color: (pembayaran['status_pembayaran'] == 'lunas' || pembayaran['status_pembayaran'] == 'berhasil') ? Colors.green : Colors.orange,
                       ),
                     ),
                   ],
@@ -192,7 +204,12 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
-                  child: Text(pengiriman['alamat_tujuan'] ?? '-', style: const TextStyle(fontSize: 13)),
+                  child: Text(
+                    (pengiriman['alamat_tujuan'] != null && pengiriman['alamat_tujuan'].toString().trim().isNotEmpty && pengiriman['alamat_tujuan'].toString() != '-')
+                        ? pengiriman['alamat_tujuan'].toString()
+                        : (userMap['alamat'] ?? '-').toString(),
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 ),
                 const Divider(height: 32),
 
@@ -248,7 +265,8 @@ class _PesananPageUIState extends State<_PesananPageUI> {
 
                 // Tombol Bayar Sekarang (jika metode Midtrans & belum bayar)
                 if (pembayaran['metode_pembayaran'] == 'Midtrans' &&
-                    pembayaran['status_pembayaran'] != 'lunas')
+                    pembayaran['status_pembayaran'] != 'lunas' &&
+                    pembayaran['status_pembayaran'] != 'berhasil')
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(

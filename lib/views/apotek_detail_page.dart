@@ -109,6 +109,8 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
     final name = widget.apotek['nama_apotek'] ?? widget.apotek['name'] ?? 'Apotek';
     final address = widget.apotek['alamat'] ?? widget.apotek['alamat_apotek'] ?? widget.apotek['address'] ?? '-';
     final jamOperasional = widget.apotek['jam_operasional'] ?? '-';
+    final noHpRaw = widget.apotek['no_hp'] ?? widget.apotek['nomor_hp'] ?? widget.apotek['phone'];
+    final noHpText = (noHpRaw != null && noHpRaw.toString().trim().isNotEmpty) ? noHpRaw.toString() : 'Nomor HP belum tersedia';
     final isOpen = controller.isApotekOpen(jamOperasional);
 
     return Scaffold(
@@ -242,6 +244,22 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
                     Text(
                       jamOperasional,
                       style: const TextStyle(fontSize: 15, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Nomor HP
+                    const Text(
+                      'Nomor HP',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black38),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      noHpText,
+                      style: TextStyle(
+                        fontSize: 15, 
+                        color: noHpText == 'Nomor HP belum tersedia' ? Colors.black45 : Colors.black87,
+                        fontStyle: noHpText == 'Nomor HP belum tersedia' ? FontStyle.italic : FontStyle.normal,
+                      ),
                     ),
                     const SizedBox(height: 24),
 

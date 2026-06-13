@@ -120,16 +120,6 @@ class _AdminProdukPageUI extends StatelessWidget {
     final controller = context.watch<AdminProdukController>();
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
 
-    final int totalKategori = controller.products
-        .map((e) => e['kategori'].toString())
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .length;
-    final int hampirHabis = controller.products.where((e) {
-      final stok = int.tryParse(e['jumlah_stok']?.toString() ?? '0') ?? 0;
-      return stok > 0 && stok < 15;
-    }).length;
-
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
       body: controller.loading
@@ -148,29 +138,20 @@ class _AdminProdukPageUI extends StatelessWidget {
                       color: AppColors.darkGreen,
                       borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
                     ),
-                    child: Column(
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'MedFast Admin',
-                              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
-                            ),
-                            Icon(Icons.notifications_none_outlined, color: Colors.white, size: 22),
-                          ],
-                        ),
-                        const SizedBox(height: 36),
-                        const Text(
-                          'Kelola Produk',
-                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Cari, tambah, edit, atau hapus produk apotek kamu.',
+                        SizedBox(height: 20),
+                        Text(
+                          'Tambah Obat Baru',
+                          style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Masukkan detail informasi obat dengan lengkap.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
                         ),
                       ],
                     ),
@@ -200,46 +181,10 @@ class _AdminProdukPageUI extends StatelessWidget {
                           label: const Text('Tambah Obat', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                           onPressed: () => _showForm(context),
                         ),
-                        const SizedBox(height: 16),
-
-                        // Search Bar
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: TextField(
-                            onChanged: controller.onSearchChanged,
-                            decoration: const InputDecoration(
-                              icon: Icon(Icons.search, color: Colors.black45, size: 20),
-                              hintText: 'Cari nama obat, kategori, atau kode...',
-                              hintStyle: TextStyle(color: Colors.black38, fontSize: 13),
-                              border: InputBorder.none,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Grid Stats
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.3,
-                          children: [
-                            _buildStatCard('Total\nProduk', '${controller.products.length}', Icons.medical_services_outlined, const Color(0xFFEAF5F8), const Color(0xFF1E4B3B)),
-                            _buildStatCard('Stok\nTerjual', '1.2k', Icons.trending_up, const Color(0xFFEAF5F8), const Color(0xFF1E4B3B)),
-                            _buildStatCard('Hampir\nHabis', '$hampirHabis', Icons.warning_amber_rounded, const Color(0xFFF5EBEB), Colors.red, isAlert: true),
-                            _buildStatCard('Kategori', '$totalKategori', Icons.category_outlined, const Color(0xFFEAF5F8), const Color(0xFF1E4B3B)),
-                          ],
-                        ),
                         const SizedBox(height: 24),
 
                         // List Obat
-                        if (controller.filtered.isEmpty)
+                        if (controller.products.isEmpty)
                           const Center(
                             child: Padding(
                               padding: EdgeInsets.symmetric(vertical: 40),
@@ -247,10 +192,8 @@ class _AdminProdukPageUI extends StatelessWidget {
                             ),
                           )
                         else
-                          ...controller.filtered.map((data) => _buildCard(context, data)).toList(),
+                          ...controller.products.map((data) => _buildCard(context, data)).toList(),
 
-                        const SizedBox(height: 24),
-                        if (controller.filtered.isNotEmpty) _buildPagination(),
                         const SizedBox(height: 80),
                       ],
                     ),
@@ -261,34 +204,6 @@ class _AdminProdukPageUI extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color bgColor, Color textColor, {bool isAlert = false}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: isAlert ? Border.all(color: Colors.red.withOpacity(0.2), width: 1) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: textColor, size: 18),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(label, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w500, height: 1.2)),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(value, style: TextStyle(color: textColor, fontSize: 22, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildCard(BuildContext context, Map<String, dynamic> data) {
     final name = data['nama_obat'] ?? data['name'] ?? '-';
@@ -357,39 +272,6 @@ class _AdminProdukPageUI extends StatelessWidget {
     );
   }
 
-  Widget _buildPagination() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _pageBtn(Icons.chevron_left, false),
-        _pageBtn('1', true),
-        _pageBtn('2', false),
-        _pageBtn('3', false),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('...', style: TextStyle(color: Colors.black54))),
-        _pageBtn(Icons.chevron_right, false),
-      ],
-    );
-  }
-
-  Widget _pageBtn(dynamic content, bool isActive) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.darkGreen : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border: isActive ? null : Border.all(color: Colors.black12),
-      ),
-      alignment: Alignment.center,
-      child: content is IconData
-          ? Icon(content, color: Colors.black54, size: 18)
-          : Text(
-              content.toString(),
-              style: TextStyle(color: isActive ? Colors.white : Colors.black87, fontSize: 13, fontWeight: isActive ? FontWeight.bold : FontWeight.normal),
-            ),
-    );
-  }
 }
 
 // ── Bottom Sheet Tambah / Edit Produk ──

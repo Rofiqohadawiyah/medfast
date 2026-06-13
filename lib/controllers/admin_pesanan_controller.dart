@@ -147,4 +147,57 @@ class AdminPesananController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Confirm payment (mark as Paid / Lunas) via API.
+  Future<void> konfirmasiPembayaran(String paymentId, String? apotekId) async {
+    successMessage = null;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final authService = AuthService();
+      final token = await authService.token;
+      final res = await ApiClient.put('/pembayaran/$paymentId', {'status_pembayaran': 'lunas'}, token: token);
+      if (res.statusCode == 200) {
+        successMessage = 'Pembayaran berhasil dikonfirmasi sebagai Lunas';
+        notifyListeners();
+        await loadPesanan(apotekId);
+      } else {
+        final errMsg = jsonDecode(res.body)['message'] ?? 'Gagal mengonfirmasi pembayaran';
+        errorMessage = errMsg;
+        notifyListeners();
+      }
+    } catch (e) {
+      errorMessage = 'Error: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Create or load a chat room for customer support.
+  Future<int?> createChatRoom(int userId, int idAdmin, int idApotek) async {
+    try {
+      final authService = AuthService();
+      final token = await authService.token;
+
+      final response = await ApiClient.post('/chat/room', {
+        'id_pelanggan': userId,
+        'id_admin': idAdmin,
+        'id_apotek': idApotek,
+      }, token: token);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final resData = jsonDecode(response.body);
+        final room = resData['data'];
+        return room['id_chat'];
+      } else {
+        errorMessage = 'Gagal membuat room chat';
+        notifyListeners();
+        return null;
+      }
+    } catch (e) {
+      errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
 }

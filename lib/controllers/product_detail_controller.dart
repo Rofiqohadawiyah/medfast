@@ -14,6 +14,7 @@ class ProductDetailController extends ChangeNotifier {
   String jamOperasional = '08.00 - 21.00';
   double? apotekLat;
   double? apotekLng;
+  String? noHpApotek;
 
   double distanceInKm = 2.5; // Fallback distance (2.5 km -> Rp 10.000)
   bool isCalculatingDistance = false;
@@ -52,6 +53,7 @@ class ProductDetailController extends ChangeNotifier {
                 detailedApotek['jam_operasional'] ?? '08.00 - 21.00';
             apotekLat = (detailedApotek['latitude'] as num?)?.toDouble();
             apotekLng = (detailedApotek['longitude'] as num?)?.toDouble();
+            noHpApotek = detailedApotek['no_hp']?.toString();
             isLoadingApotek = false;
             notifyListeners();
             _calculateDistance(userAddress);
@@ -69,6 +71,7 @@ class ProductDetailController extends ChangeNotifier {
       jamOperasional = apotek['jam_operasional'] ?? '08.00 - 21.00';
       apotekLat = (apotek['latitude'] as num?)?.toDouble();
       apotekLng = (apotek['longitude'] as num?)?.toDouble();
+      noHpApotek = apotek['no_hp']?.toString();
       isLoadingApotek = false;
       notifyListeners();
       _calculateDistance(userAddress);

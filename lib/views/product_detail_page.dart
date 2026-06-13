@@ -200,6 +200,7 @@ class _ProductDetailPageUI extends StatelessWidget {
                           'nama_apotek': controller.namaApotek,
                           'alamat': controller.alamatApotek,
                           'jam_operasional': controller.jamOperasional,
+                          'no_hp': controller.noHpApotek,
                           'latitude': controller.apotekLat,
                           'longitude': controller.apotekLng,
                         };
