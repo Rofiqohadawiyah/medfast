@@ -38,7 +38,7 @@ class _AdminProfilUIState extends State<_AdminProfilUI> {
   void _showEditProfileDialog() {
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
     if (user == null) return;
-    
+
     final controller = context.read<AdminProfilController>();
 
     final nameCtrl = TextEditingController(text: user.name);
@@ -209,7 +209,7 @@ class _AdminProfilUIState extends State<_AdminProfilUI> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(top: 60, bottom: 40),
@@ -242,7 +242,7 @@ class _AdminProfilUIState extends State<_AdminProfilUI> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 28), // Balance the back arrow
+                        const SizedBox(width: 28),
                       ],
                     ),
                   ),
@@ -273,7 +273,7 @@ class _AdminProfilUIState extends State<_AdminProfilUI> {
 
             const SizedBox(height: 32),
 
-            // Menus
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(

@@ -20,7 +20,7 @@ class ProfilePage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(top: 60, bottom: 40),
@@ -33,7 +33,7 @@ class ProfilePage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // Top Bar
+
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
@@ -41,7 +41,7 @@ class ProfilePage extends StatelessWidget {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () {}, // Navigation back if needed
+                          onPressed: () {},
                         ),
                         const Text(
                           'Data Profile',
@@ -51,13 +51,13 @@ class ProfilePage extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(width: 48), // Balance for back button
+                        const SizedBox(width: 48),
                       ],
                     ),
                   ),
                   const SizedBox(height: 30),
-                  
-                  // Avatar
+
+
                   Container(
                     width: 100,
                     height: 100,
@@ -75,8 +75,8 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // User Info
+
+
                   Text(
                     user?.name ?? 'Loading...',
                     style: const TextStyle(
@@ -88,10 +88,10 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 30),
-            
-            // Menu List
+
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(

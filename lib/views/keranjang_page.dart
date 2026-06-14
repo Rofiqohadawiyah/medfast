@@ -95,7 +95,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
       if (result['method'] == 'Midtrans') {
         final paymentUrl = result['payment_url'];
         final idPesanan = result['idPesanan'];
-        
+
         if (paymentUrl != null) {
           Navigator.pushAndRemoveUntil(
             context,
@@ -153,7 +153,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
 
   void _showCheckoutDialog(BuildContext context, CartProvider cartProvider, String userAddress) {
     final controller = context.read<KeranjangController>();
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -182,8 +182,8 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                   const SizedBox(height: 4),
                   Text(userAddress, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                   const Divider(height: 24),
-                  
-                  // Metode Pembayaran
+
+
                   const Text('Metode Pembayaran:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
                   const SizedBox(height: 8),
                   Wrap(
@@ -232,7 +232,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                     ),
                   const Divider(height: 24),
 
-                  // Rincian Pembayaran
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -274,14 +274,14 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                           ? null
                           : () async {
                               final currentContext = context;
-                              Navigator.pop(sheetContext); // Tutup bottomsheet
-                              
+                              Navigator.pop(sheetContext);
+
                               final result = await ctrl.prosesCheckout(
-                                cartProvider: cartProvider, 
+                                cartProvider: cartProvider,
                                 userAddress: userAddress,
                                 selectedCartIds: _selectedCartIds.toList(),
                               );
-                              
+
                               if (currentContext.mounted) {
                                 _handleCheckoutResult(currentContext, result);
                               }
@@ -313,8 +313,8 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
     final controller = context.watch<KeranjangController>();
 
     final allCartIds = cartProvider.cartItems.map((item) => (item['id_keranjang'] as num).toInt()).toList();
-    
-    // Sync Selected Items with current cart items
+
+
     _selectedCartIds.retainAll(allCartIds);
     if (_selectedCartIds.isEmpty && allCartIds.isNotEmpty) {
       _selectedCartIds.addAll(allCartIds);
@@ -326,15 +326,15 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
     final recommendedProducts = productProvider.products
         .where((prod) => !inCartProductIds.contains(prod.id))
         .toList();
-    final displayRecommendations = recommendedProducts.isNotEmpty 
-        ? recommendedProducts 
+    final displayRecommendations = recommendedProducts.isNotEmpty
+        ? recommendedProducts
         : productProvider.products;
 
     return Scaffold(
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             padding: EdgeInsets.only(
@@ -370,7 +370,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
             ),
           ),
 
-          // Alamat Warning Header
+
           if (!hasAddress)
             Container(
               margin: const EdgeInsets.all(16),
@@ -400,7 +400,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
               ),
             ),
 
-          // List Items & Suggestions
+
           Expanded(
             child: cartProvider.isLoading && cartProvider.cartItems.isEmpty
                 ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
@@ -412,7 +412,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                         child: ListView(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           children: [
-                            // Pilih Semua Checkbox
+
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Row(
@@ -446,10 +446,10 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                             ),
                             const SizedBox(height: 8),
 
-                            // Items List
+
                             ..._buildCartListItems(context, cartProvider),
 
-                            // Recommendations
+
                             _buildRecommendations(context, displayRecommendations),
                             const SizedBox(height: 24),
                           ],
@@ -457,7 +457,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                       ),
           ),
 
-          // Total & Checkout Footer
+
           if (cartProvider.cartItems.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(24),
@@ -580,7 +580,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
       final item = cartProvider.cartItems[index];
       final obat = item['obat'] as Map<String, dynamic>? ?? {};
       final idKeranjang = (item['id_keranjang'] as num).toInt();
-      
+
       final name = (obat['nama_obat'] ?? obat['name'] ?? 'Nama Obat').toString();
       final price = (obat['harga'] ?? obat['price'] ?? 0) as num;
       final image = (obat['gambar'] ?? obat['image'] ?? '').toString();
@@ -603,7 +603,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
         ),
         child: Row(
           children: [
-            // Checkbox
+
             Checkbox(
               value: isSelected,
               activeColor: AppColors.darkGreen,
@@ -622,7 +622,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
             ),
             const SizedBox(width: 4),
 
-            // Product image
+
             Container(
               width: 70,
               height: 70,
@@ -639,7 +639,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
             ),
             const SizedBox(width: 14),
 
-            // Details and controls
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -655,7 +655,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // Small Trash Icon
+
                       IconButton(
                         constraints: const BoxConstraints(),
                         padding: EdgeInsets.zero,
@@ -665,7 +665,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                     ],
                   ),
                   const SizedBox(height: 2),
-                  // Subtitle (Category)
+
                   Text(
                     (obat['kategori'] ?? obat['category'] ?? 'Obat').toString(),
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
@@ -682,7 +682,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                           fontSize: 14,
                         ),
                       ),
-                      // Modern Pill Quantity Selector
+
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
@@ -791,7 +791,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Image
+
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
@@ -820,7 +820,7 @@ class _KeranjangPageUIState extends State<_KeranjangPageUI> {
                                 ),
                         ),
                       ),
-                      // Details
+
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Column(

@@ -23,7 +23,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
-    // Safety check: jika yang masuk adalah admin, tendang ke admin dashboard
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = Provider.of<AuthProvider>(context, listen: false).userModel;
       if (user?.role == 'admin') {
@@ -36,10 +36,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   final List<Widget> _pages = [
-    const LandingPage(), // TAB 1: DASHBOARD OBAT (Sesuai Figma)
-    const ChatRoomsPage(), // TAB 2: CHAT INBOX
-    const PesananPage(),  // TAB 3: RIWAYAT PESANAN
-    const ProfilePage(),  // TAB 4: PROFILE
+    const LandingPage(),
+    const ChatRoomsPage(),
+    const PesananPage(),
+    const ProfilePage(),
   ];
 
   @override

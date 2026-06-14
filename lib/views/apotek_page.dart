@@ -61,7 +61,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
     final success = await controller.hubungiApotek(apotek, user.uid);
 
     if (mounted) {
-      Navigator.pop(context); // Pop loading
+      Navigator.pop(context);
     }
 
     if (success && mounted) {
@@ -125,9 +125,9 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
 
     final pharmacies = controller.pharmacies;
 
-    // Buat daftar marker dari data API
+
     final markers = <Marker>[
-      // Marker lokasi user
+
       if (controller.locationLoaded)
         Marker(
           point: controller.userLocation,
@@ -139,7 +139,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
             size: 36,
           ),
         ),
-      // Marker apotek dari API
+
       ...pharmacies.map((item) {
         final data = item as Map<String, dynamic>;
         final lat = (data['latitude'] as num?)?.toDouble() ?? 0;
@@ -172,7 +172,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 50, left: 24, right: 24, bottom: 30),
@@ -205,7 +205,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
 
           const SizedBox(height: 16),
 
-          // PETA
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ClipRRect(
@@ -232,7 +232,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
 
           const SizedBox(height: 16),
 
-          // Judul List
+
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
             child: Align(
@@ -250,7 +250,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
 
           const SizedBox(height: 12),
 
-          // LIST APOTEK
+
           Expanded(
             child: pharmacies.isEmpty
                 ? const Center(child: Text('Belum ada apotek tersedia.'))
@@ -266,7 +266,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
                       final address = data['alamat'] ?? data['alamat_apotek'] ?? data['address'] ?? '-';
                       final jamOperasional = data['jam_operasional'] ?? '-';
 
-                      // Hitung jarak dari user
+
                       final distanceKm = controller.calculateDistance(lat, lng);
 
                       return GestureDetector(
@@ -305,7 +305,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Icon
+
                               Container(
                                 width: 52,
                                 height: 52,
@@ -316,7 +316,7 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
                                 child: const Icon(Icons.local_pharmacy, color: AppColors.darkGreen, size: 28),
                               ),
                               const SizedBox(width: 14),
-                              // Info
+
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,13 +388,13 @@ class _ApotekPageUIState extends State<_ApotekPageUI> {
                                   ],
                                 ),
                               ),
-                              // Tombol Chat
+
                               IconButton(
                                 onPressed: () => _hubungiApotek(data),
                                 icon: const Icon(Icons.chat_bubble_outline, color: AppColors.darkGreen),
                                 tooltip: 'Chat Apotek',
                               ),
-                              // Tombol Navigasi
+
                               IconButton(
                                 onPressed: () => controller.openGoogleMaps(lat, lng, name),
                                 icon: const Icon(Icons.navigation, color: AppColors.darkGreen),

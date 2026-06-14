@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
@@ -9,7 +10,8 @@ import 'views/main_screen.dart';
 import 'views/admin_main_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(const MedFastApp());
 }
 
@@ -51,7 +53,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    _loginStatusFuture = Provider.of<AuthProvider>(context, listen: false).checkLoginStatus();
+    _loginStatusFuture = Provider.of<AuthProvider>(context, listen: false)
+        .checkLoginStatus()
+        .whenComplete(() => FlutterNativeSplash.remove());
   }
 
   @override

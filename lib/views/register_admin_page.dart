@@ -23,7 +23,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
 
   bool _obscurePassword = true;
   bool _cekLoading = false;
-  String? _namaApotekFound; // nama apotek hasil CEK
+  String? _namaApotekFound;
 
   @override
   void dispose() {
@@ -35,7 +35,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
     super.dispose();
   }
 
-  // ── CEK kode apotek ───────────────────────────────────────────────────────
+
   Future<void> _cekKodeApotek() async {
     final kode = _kodeApotekCtrl.text.trim();
     if (kode.isEmpty) {
@@ -95,7 +95,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
     }
   }
 
-  // ── Register ──────────────────────────────────────────────────────────────
+
   Future<void> _handleRegister() async {
     final kode = _kodeApotekCtrl.text.trim();
     final name = _nameCtrl.text.trim();
@@ -132,7 +132,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
       email,
       password,
       phone,
-      kode, // kode_apotek dikirim sebagai pharmacyId
+      kode,
       _namaApotekFound!,
       kodeApotek: kode,
     );
@@ -159,7 +159,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -170,7 +170,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────────────────────────────
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(
@@ -261,7 +261,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Tombol CEK
+
                       _cekLoading
                           ? const SizedBox(
                               width: 44,
@@ -298,7 +298,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
                     ],
                   ),
 
-                  // Info nama apotek jika CEK berhasil
+
                   if (_namaApotekFound != null) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -323,7 +323,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
 
                   const SizedBox(height: 28),
 
-                  // ── Data Pemilik ────────────────────────────────────────
+
                   const Text(
                     'Data Pemilik',
                     style: TextStyle(
@@ -358,7 +358,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
 
                   const SizedBox(height: 36),
 
-                  // ── Tombol Register ─────────────────────────────────────
+
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -395,7 +395,7 @@ class _RegisterAdminPageState extends State<RegisterAdminPage> {
 
                   const SizedBox(height: 20),
 
-                  // ── Link login ──────────────────────────────────────────
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

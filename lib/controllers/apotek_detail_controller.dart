@@ -176,7 +176,7 @@ class ApotekDetailController extends ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final resData = jsonDecode(response.body);
         final room = resData['data'];
-        return room['id_chat']; // Return chatId and idAdmin in a map or just return chatid
+        return room['id_chat'];
       } else {
         errorMessage = 'Gagal membuat room chat';
         return null;

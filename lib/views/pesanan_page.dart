@@ -29,7 +29,7 @@ class _PesananPageUI extends StatefulWidget {
 }
 
 class _PesananPageUIState extends State<_PesananPageUI> {
-  String _selectedTab = 'aktif'; // 'aktif', 'riwayat', 'dibatalkan'
+  String _selectedTab = 'aktif';
 
   @override
   void initState() {
@@ -55,7 +55,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
   void _showOrderDetail(BuildContext context, Map<String, dynamic> order) async {
     final controller = context.read<PesananController>();
     final idPesanan = order['id_pesanan'];
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -65,8 +65,8 @@ class _PesananPageUIState extends State<_PesananPageUI> {
     final detail = await controller.fetchOrderDetail(idPesanan);
 
     if (context.mounted) {
-      Navigator.pop(context); // Pop loading dialog
-      
+      Navigator.pop(context);
+
       if (detail != null) {
         _showDetailBottomSheet(context, detail, controller);
       } else {
@@ -132,7 +132,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                 Text('Tanggal: ${_formatDate(detail['tanggal_pesanan'])}', style: const TextStyle(color: Colors.black54)),
                 const Divider(height: 32),
 
-                // Item list
+
                 const Text('Daftar Obat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 ...detailItems.map((item) {
@@ -150,7 +150,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                 }).toList(),
                 const Divider(height: 32),
 
-                // Payment Info
+
                 const Text('Informasi Pembayaran', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Row(
@@ -184,7 +184,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                 ),
                 const Divider(height: 32),
 
-                // Delivery Info
+
                 const Text('Informasi Pengiriman', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Row(
@@ -213,7 +213,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                 ),
                 const Divider(height: 32),
 
-                // Grand Total
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -223,7 +223,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                 ),
                 const SizedBox(height: 24),
 
-                // Actions
+
                 Row(
                   children: [
                     if (status == 'pending' || status == 'menunggu') ...[
@@ -236,7 +236,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           onPressed: () {
-                            Navigator.pop(sheetContext); // close sheet
+                            Navigator.pop(sheetContext);
                             _confirmCancelDialog(context, detail['id_pesanan'], controller);
                           },
                           child: const Text('Batalkan'),
@@ -263,7 +263,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                 ),
                 const SizedBox(height: 12),
 
-                // Tombol Bayar Sekarang (jika metode Midtrans & belum bayar)
+
                 if (pembayaran['metode_pembayaran'] == 'Midtrans' &&
                     pembayaran['status_pembayaran'] != 'lunas' &&
                     pembayaran['status_pembayaran'] != 'berhasil')
@@ -276,7 +276,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () async {
-                        Navigator.pop(sheetContext); // tutup bottom sheet
+                        Navigator.pop(sheetContext);
                         final paymentService = PaymentService();
                         final snapData = await paymentService.getSnapToken(detail['id_pesanan']);
                         if (context.mounted) {
@@ -370,7 +370,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
     final chatId = await controller.createChatRoom(int.parse(user.uid), idAdmin, idApotek);
 
     if (context.mounted) {
-      Navigator.pop(context); // Pop loading indicator
+      Navigator.pop(context);
       if (chatId != null) {
         Navigator.push(
           context,
@@ -403,7 +403,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
 
     final detail = await controller.fetchOrderDetail(idPesanan);
     if (context.mounted) {
-      Navigator.pop(context); // Pop loading dialog
+      Navigator.pop(context);
     }
 
     if (detail == null) {
@@ -515,12 +515,12 @@ class _PesananPageUIState extends State<_PesananPageUI> {
     final apotek = order['apotek'] ?? {};
     final status = order['status_pesanan'] ?? 'menunggu';
     final detailItems = order['detail_pesanan'] as List? ?? [];
-    
+
     final hasItems = detailItems.isNotEmpty;
     final firstItem = hasItems ? detailItems.first : null;
     final firstObat = firstItem?['obat'] ?? {};
     final firstImage = (firstObat['gambar'] ?? firstObat['image'] ?? '').toString();
-    
+
     String productText = '';
     if (hasItems) {
       final firstName = (firstObat['nama_obat'] ?? firstObat['name'] ?? 'Obat').toString();
@@ -552,7 +552,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Apotek Icon, Name, Date and Status Chip
+
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -587,10 +587,10 @@ class _PesananPageUIState extends State<_PesananPageUI> {
               _buildStatusBadge(status),
             ],
           ),
-          
+
           const Divider(height: 24, thickness: 0.8),
 
-          // Row 2: Product info
+
           Row(
             children: [
               Container(
@@ -631,7 +631,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
 
           const Divider(height: 24, thickness: 0.8),
 
-          // Row 3: Total & Action Button
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -663,7 +663,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
 
   Widget _buildActionButton(BuildContext context, Map<String, dynamic> order) {
     final status = (order['status_pesanan'] ?? 'menunggu').toString().toLowerCase();
-    
+
     if (status == 'selesai') {
       return OutlinedButton(
         style: OutlinedButton.styleFrom(
@@ -711,7 +711,7 @@ class _PesananPageUIState extends State<_PesananPageUI> {
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header Banner
+
           Container(
             width: double.infinity,
             padding: EdgeInsets.only(
@@ -760,10 +760,10 @@ class _PesananPageUIState extends State<_PesananPageUI> {
             ),
           ),
 
-          // Tab Selector
+
           _buildTabSelector(),
 
-          // Body Content
+
           Expanded(
             child: controller.isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))

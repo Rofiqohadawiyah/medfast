@@ -12,12 +12,12 @@ class ChatRoomsController extends ChangeNotifier {
   IO.Socket? _socket;
   String? _currentUserId;
 
-  /// Normalisasi string waktu dari server ke format DateTime yang konsisten.
+
   DateTime? _parseTime(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     try {
       String s = raw.trim();
-      // Server kadang kirim "2026-06-10 12:30:00" tanpa T dan Z
+
       if (!s.contains('T')) {
         s = s.replaceFirst(' ', 'T');
       }
@@ -30,7 +30,7 @@ class ChatRoomsController extends ChangeNotifier {
     }
   }
 
-  /// Fetch all chat rooms, ambil pesan terakhir, dan hitung unread per room.
+
   Future<void> fetchRooms(String userId, {bool showLoading = true}) async {
     if (showLoading) {
       isLoading = true;
@@ -56,7 +56,7 @@ class ChatRoomsController extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final myIdStr = userId.toString();
 
-      // Hitung manual unread dan waktu terakhir dari pesan
+
       for (var room in fetchedRooms) {
         final chatId = room['id_chat'];
         if (chatId == null) continue;
@@ -68,7 +68,7 @@ class ChatRoomsController extends ChangeNotifier {
             final List<dynamic> msgs = msgDecoded['data'] ?? [];
 
             if (msgs.isNotEmpty) {
-              // Sort ascending untuk cari last message
+
               msgs.sort((a, b) {
                 final tA = _parseTime(a['waktu_kirim']?.toString());
                 final tB = _parseTime(b['waktu_kirim']?.toString());
@@ -109,23 +109,23 @@ class ChatRoomsController extends ChangeNotifier {
         } catch (_) {}
       }
 
-      // Sort: chat dengan pesan terbaru muncul paling atas
+
       fetchedRooms.sort((a, b) {
         final tA = _parseTime(a['pesan_terakhir_waktu']?.toString() ?? a['tanggal_chat']?.toString() ?? a['updated_at']?.toString());
         final tB = _parseTime(b['pesan_terakhir_waktu']?.toString() ?? b['tanggal_chat']?.toString() ?? b['updated_at']?.toString());
         if (tA == null && tB == null) return 0;
         if (tA == null) return 1;
         if (tB == null) return -1;
-        return tB.compareTo(tA); // descending
+        return tB.compareTo(tA);
       });
 
       rooms = fetchedRooms;
-      
-      // Setup realtime socket if not already connected
+
+
       if (_socket == null) {
         _initSocket(userId, fetchedRooms);
       } else {
-        // If already connected, join any new rooms
+
         for (var r in fetchedRooms) {
           final cid = r['id_chat'];
           if (cid != null) {
@@ -162,7 +162,7 @@ class ChatRoomsController extends ChangeNotifier {
 
     _socket!.on('receive_message', (data) {
       debugPrint('[ChatRooms] New message received: $data');
-      // Automatically refetch rooms when a new message arrives
+
       fetchRooms(userId, showLoading: false);
     });
 
@@ -176,7 +176,7 @@ class ChatRoomsController extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Check if a text string is an image URL.
+
   bool _isImageUrl(String text) {
     return text.startsWith('http') && (
       text.contains('.png') ||
@@ -186,7 +186,7 @@ class ChatRoomsController extends ChangeNotifier {
     );
   }
 
-  /// Format an ISO date string for display in the room list.
+
   String formatDate(String? isoString) {
     final dt = _parseTime(isoString);
     if (dt == null) return '';
@@ -213,7 +213,7 @@ class ChatRoomsController extends ChangeNotifier {
     }
   }
 
-  /// Get display name based on user role.
+
   String getDisplayName(Map<String, dynamic> room, bool isAdmin) {
     final apotek = room['apotek'] ?? {};
     final pelanggan = room['pelanggan'] ?? {};
@@ -222,19 +222,19 @@ class ChatRoomsController extends ChangeNotifier {
         : (apotek['nama_apotek'] ?? 'Apotek');
   }
 
-  /// Get subtitle text based on user role.
+
   String getSubtitleText(bool isAdmin) {
     return isAdmin
         ? 'Pertanyaan seputar produk atau pesanan'
         : 'Hubungi apotek untuk info produk atau pengiriman.';
   }
 
-  /// Get last message text for a room.
+
   String getLastMessage(Map<String, dynamic> room, bool isAdmin) {
     return room['pesan_terakhir'] ?? room['last_message'] ?? getSubtitleText(isAdmin);
   }
 
-  /// Get unread count for a room.
+
   int getUnreadCount(Map<String, dynamic> room) {
     return room['unread_count'] ?? room['unread'] ?? 0;
   }

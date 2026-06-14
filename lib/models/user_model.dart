@@ -2,7 +2,7 @@ class UserModel {
   final String uid;
   final String name;
   final String email;
-  final String role; // 'admin' or 'pelanggan'
+  final String role;
   final String phone;
   final String? pharmacyId;
   final String? pharmacyName;

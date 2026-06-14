@@ -14,7 +14,7 @@ class RegisterPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(top: 80, left: 32, right: 32, bottom: 50),
@@ -51,12 +51,12 @@ class RegisterPage extends StatelessWidget {
 
             const SizedBox(height: 50),
 
-            // Pilihan Role
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  // Pelanggan
+
                   _roleCard(
                     context,
                     icon: Icons.person_outline,
@@ -70,7 +70,7 @@ class RegisterPage extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 20),
-                  // Admin/Apotek
+
                   _roleCard(
                     context,
                     icon: Icons.storefront_outlined,
@@ -86,7 +86,7 @@ class RegisterPage extends StatelessWidget {
 
                   const SizedBox(height: 50),
 
-                  // Login Link
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -137,7 +137,7 @@ class RegisterPage extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Icon Circle
+
             Container(
               width: 56,
               height: 56,
@@ -148,7 +148,7 @@ class RegisterPage extends StatelessWidget {
               child: Icon(icon, size: 30, color: Colors.black87),
             ),
             const SizedBox(width: 16),
-            // Text
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

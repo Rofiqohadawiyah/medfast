@@ -39,7 +39,7 @@ class _AdminProdukPageUI extends StatelessWidget {
   void _hapus(BuildContext context, Map<String, dynamic> data) async {
     final controller = context.read<AdminProdukController>();
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
-    
+
     final konfirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -130,7 +130,7 @@ class _AdminProdukPageUI extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // Header
+
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 32),
@@ -157,7 +157,7 @@ class _AdminProdukPageUI extends StatelessWidget {
                     ),
                   ),
 
-                  // List & Content
+
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -168,7 +168,7 @@ class _AdminProdukPageUI extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 16),
                             child: Text(controller.errorMessage!, style: const TextStyle(color: Colors.red)),
                           ),
-                        // Tambah Obat Button
+
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4A6B5D),
@@ -183,7 +183,7 @@ class _AdminProdukPageUI extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
 
-                        // List Obat
+
                         if (controller.products.isEmpty)
                           const Center(
                             child: Padding(
@@ -274,7 +274,7 @@ class _AdminProdukPageUI extends StatelessWidget {
 
 }
 
-// ── Bottom Sheet Tambah / Edit Produk ──
+
 class _ProdukSheet extends StatefulWidget {
   final Map<String, dynamic>? existing;
   final BuildContext parentContext;
@@ -333,17 +333,17 @@ class _ProdukSheetState extends State<_ProdukSheet> {
   Future<void> _simpan() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    
+
     final controller = widget.parentContext.read<AdminProdukController>();
     final user = Provider.of<AuthProvider>(widget.parentContext, listen: false).userModel;
-    
+
     final fields = <String, String>{
       'nama_obat': _nameCtrl.text.trim(),
       'deskripsi': _descCtrl.text.trim(),
       'kategori': _catCtrl.text.trim(),
       'harga': _priceCtrl.text.trim(),
     };
-    
+
     if (_isEdit && widget.existing?['id_stok'] != null) {
       fields['id_stok'] = widget.existing!['id_stok'].toString();
     }
@@ -377,7 +377,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
      Navigator.pop(context);
      final controller = widget.parentContext.read<AdminProdukController>();
      final user = Provider.of<AuthProvider>(widget.parentContext, listen: false).userModel;
-     
+
      final success = await controller.hapusProduk(widget.existing!);
      if (success && widget.parentContext.mounted) {
          ScaffoldMessenger.of(widget.parentContext).showSnackBar(
@@ -400,7 +400,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
         ),
         child: Stack(
           children: [
-            // Dark Green Header
+
             Container(
               height: 160,
               decoration: const BoxDecoration(
@@ -433,7 +433,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
               ),
             ),
 
-            // White Form Container
+
             Positioned(
               top: 80,
               left: 20,
@@ -451,7 +451,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Photo Area
+
                         Center(
                           child: Column(
                             children: [
@@ -496,7 +496,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Form Fields
+
                         _field('Nama Obat', _nameCtrl, Icons.local_offer_outlined),
                         const SizedBox(height: 16),
                         _field('Kategori', _catCtrl, Icons.category_outlined, required: false, isDropdown: true, dropdownItems: _kategoriList),
@@ -512,7 +512,7 @@ class _ProdukSheetState extends State<_ProdukSheet> {
                         _field('Deskripsi', _descCtrl, Icons.description_outlined, required: false, maxLines: 4),
                         const SizedBox(height: 32),
 
-                        // Submit Button
+
                         SizedBox(
                           width: double.infinity,
                           height: 52,

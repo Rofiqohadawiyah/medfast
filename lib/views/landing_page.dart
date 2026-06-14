@@ -32,7 +32,7 @@ class _LandingPageUI extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // HEADER HIJAU (Sesuai Figma)
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 30),
@@ -46,7 +46,7 @@ class _LandingPageUI extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Lokasi (dinamis dari GPS)
+
                   Row(
                     children: [
                       const Icon(Icons.location_on, color: Colors.white, size: 18),
@@ -98,7 +98,7 @@ class _LandingPageUI extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(height: 24),
-                  // SEARCH BAR
+
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
@@ -120,7 +120,7 @@ class _LandingPageUI extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // CATEGORY FEATURE GRID (Shopee-Style)
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
@@ -141,7 +141,7 @@ class _LandingPageUI extends StatelessWidget {
                   _buildCategoryItem(
                     context,
                     icon: Icons.chat_bubble_outline,
-                    color: const Color(0xFFEE4D2D), // Shopee Orange
+                    color: const Color(0xFFEE4D2D),
                     label: 'Chat Admin',
                     onTap: () {
                       Navigator.pushAndRemoveUntil(
@@ -182,7 +182,7 @@ class _LandingPageUI extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // REKOMENDASI SECTION
+
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Row(
@@ -199,7 +199,7 @@ class _LandingPageUI extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // PRODUCT GRID (Using Controller)
+
             Builder(
               builder: (context) {
                 if (controller.productsLoading) {
@@ -248,7 +248,7 @@ class _LandingPageUI extends StatelessWidget {
   }
 
   Widget _buildProductCard(
-    BuildContext context, 
+    BuildContext context,
     Map<String, dynamic> product,
     Map<String, Map<String, dynamic>> productApotekMap,
   ) {

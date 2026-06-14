@@ -8,20 +8,20 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 
 class ApotekController extends ChangeNotifier {
-  LatLng userLocation = const LatLng(-8.1647, 113.7152); // Default Jember
+  LatLng userLocation = const LatLng(-8.1647, 113.7152);
   bool locationLoaded = false;
   int selectedApotekIndex = -1;
   List<dynamic> pharmacies = [];
   bool isLoading = true;
   String? errorMessage;
 
-  // Chat room creation result
+
   int? createdChatId;
   String? createdChatName;
   int? createdChatAdminId;
   bool isChatLoading = false;
 
-  /// Load pharmacies from API.
+
   Future<void> loadPharmacies() async {
     isLoading = true;
     errorMessage = null;
@@ -42,15 +42,15 @@ class ApotekController extends ChangeNotifier {
     }
   }
 
-  /// Calculate user location from GPS or geocoding, then load pharmacies.
+
   Future<void> initData(String addressStr) async {
     await _resolveUserLocation(addressStr);
     await loadPharmacies();
   }
 
-  /// Resolve user location via GPS first, then fallback to geocoding.
+
   Future<void> _resolveUserLocation(String addressStr) async {
-    // 1. Try GPS First
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (serviceEnabled) {
@@ -72,7 +72,7 @@ class ApotekController extends ChangeNotifier {
       }
     } catch (_) {}
 
-    // 2. Geocode address string using Nominatim if GPS failed
+
     if (addressStr.isNotEmpty) {
       try {
         final searchUrl = Uri.parse(
@@ -94,20 +94,20 @@ class ApotekController extends ChangeNotifier {
     }
   }
 
-  /// Open Google Maps navigation for a given coordinate.
+
   Future<void> openGoogleMaps(double lat, double lng, String name) async {
     final uri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($name)');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
-      // Fallback ke browser
+
       final webUri = Uri.parse(
           'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     }
   }
 
-  /// Check if an apotek is currently open based on its operational hours string.
+
   bool isApotekOpen(dynamic jamOperasional) {
     if (jamOperasional == null) return false;
     final String jamStr = jamOperasional.toString();
@@ -147,13 +147,13 @@ class ApotekController extends ChangeNotifier {
     }
   }
 
-  /// Select an apotek by index.
+
   void selectApotek(int index) {
     selectedApotekIndex = index;
     notifyListeners();
   }
 
-  /// Calculate distance from user location to a coordinate.
+
   double? calculateDistance(double lat, double lng) {
     if (!locationLoaded) return null;
     final distanceM = Geolocator.distanceBetween(
@@ -165,7 +165,7 @@ class ApotekController extends ChangeNotifier {
     return distanceM / 1000;
   }
 
-  /// Create or get a chat room with an apotek, returns true on success.
+
   Future<bool> hubungiApotek(Map<String, dynamic> apotek, String userId) async {
     final idApotek = apotek['id_apotek'];
     final idAdmin = apotek['id_admin'];

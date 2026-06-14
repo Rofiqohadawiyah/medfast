@@ -54,7 +54,7 @@ class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
         children: [
           const SizedBox.expand(),
 
-          // Header hijau
+
           Container(
             height: 160,
             width: double.infinity,
@@ -90,7 +90,7 @@ class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
             ),
           ),
 
-          // Konten chat list
+
           Positioned(
             top: 130,
             left: 16,
@@ -123,7 +123,7 @@ class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
     );
   }
 
-  /// Empty state saat belum ada chat.
+
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
@@ -165,7 +165,7 @@ class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
     );
   }
 
-  /// Daftar room chat.
+
   Widget _buildRoomList(ChatRoomsController controller, dynamic user) {
     final isAdmin = user?.role == 'admin';
 
@@ -184,7 +184,7 @@ class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
         final lastMessage = controller.getLastMessage(room, isAdmin);
         final unreadCount = controller.getUnreadCount(room);
 
-        // Gunakan waktu pesan terakhir, bukan tanggal_chat
+
         final dateStr = controller.formatDate(
           room['pesan_terakhir_waktu']?.toString() ?? room['tanggal_chat']?.toString(),
         );
@@ -207,7 +207,7 @@ class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nama + pesan terakhir
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,7 +237,7 @@ class _ChatRoomsPageUIState extends State<_ChatRoomsPageUI> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Waktu + badge unread
+
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [

@@ -66,7 +66,7 @@ class _RegisterPelangganPageState extends State<RegisterPelangganPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(top: 80, left: 32, right: 32, bottom: 50),
@@ -116,7 +116,7 @@ class _RegisterPelangganPageState extends State<RegisterPelangganPage> {
                   _inputField('Password', Icons.lock_outline, _passwordController, isPassword: true),
                   const SizedBox(height: 40),
 
-                  // Register Button
+
                   SizedBox(
                     width: double.infinity,
                     height: 60,
@@ -141,7 +141,7 @@ class _RegisterPelangganPageState extends State<RegisterPelangganPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Login Link
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

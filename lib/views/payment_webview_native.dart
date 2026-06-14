@@ -1,9 +1,9 @@
-// Native (Android/iOS) implementation - uses webview_flutter
+
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void openPaymentUrl(String url) {
-  // No-op on native, WebView handles it
+
 }
 
 class NativePaymentWebview extends StatefulWidget {
@@ -123,8 +123,8 @@ class _NativePaymentWebviewState extends State<NativePaymentWebview> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () {
-                Navigator.pop(context); // close dialog
-                Navigator.pop(context); // close webview
+                Navigator.pop(context);
+                Navigator.pop(context);
                 if (success) {
                   widget.onSuccess?.call();
                 } else {

@@ -55,7 +55,7 @@ class LandingController extends ChangeNotifier {
         ),
       );
 
-      // Reverse geocode menggunakan Nominatim
+
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.latitude}&lon=${pos.longitude}&zoom=18&addressdetails=1',
       );
@@ -104,7 +104,7 @@ class LandingController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Panggil API secara bersamaan untuk efisiensi
+
       final responses = await Future.wait([
         ApiClient.get('/apotek'),
         ApiClient.get('/stok-obat'),
@@ -115,7 +115,7 @@ class LandingController extends ChangeNotifier {
       final stockRes = responses[1];
       final obatRes = responses[2];
 
-      // Mapping Stok Obat ke Apotek
+
       if (apotekRes.statusCode == 200 && stockRes.statusCode == 200) {
         final List<dynamic> apoteks = jsonDecode(apotekRes.body);
         final List<dynamic> stocks = jsonDecode(stockRes.body);
@@ -141,7 +141,7 @@ class LandingController extends ChangeNotifier {
         productApotekMap = newMap;
       }
 
-      // Ambil List Obat
+
       if (obatRes.statusCode == 200) {
         allProducts = jsonDecode(obatRes.body);
       } else {
@@ -165,7 +165,7 @@ class LandingController extends ChangeNotifier {
   void _filterProducts() {
     filteredProducts = allProducts.where((p) {
       final idObat = (p['id_obat'] ?? p['id'] ?? '').toString();
-      // Sembunyikan obat yang stoknya 0 / dihapus
+
       if (!productApotekMap.containsKey(idObat)) return false;
 
       var name = (p['nama_obat'] ?? p['name'] ?? '').toString().toLowerCase();

@@ -29,7 +29,7 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // Validasi format email sederhana
+
     if (!email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Masukkan format email yang benar (contoh: user@mail.com)')),
@@ -76,7 +76,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(top: 80, left: 32, right: 32, bottom: 60),
@@ -111,21 +111,21 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 60),
 
-            // Form
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  _inputField('Email', Icons.email_outlined, _emailController), // SUDAH DIGANTI KE EMAIL
+                  _inputField('Email', Icons.email_outlined, _emailController),
                   const SizedBox(height: 20),
                   _inputField('Password', Icons.lock_outline, _passwordController, isPassword: true),
-                  
+
                   const SizedBox(height: 50),
 
-                  // Login Button
+
                   SizedBox(
                     width: double.infinity,
                     height: 58,
@@ -151,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 30),
 
-                  // Register Text
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

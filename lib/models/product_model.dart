@@ -48,8 +48,8 @@ class ProductModel {
       name: json['nama_obat'] ?? json['name'] ?? '',
       category: json['kategori'] ?? json['category'] ?? '',
       description: json['deskripsi'] ?? json['description'] ?? '',
-      price: (json['harga'] ?? json['price'] ?? 0) is int 
-          ? (json['harga'] ?? json['price'] ?? 0) 
+      price: (json['harga'] ?? json['price'] ?? 0) is int
+          ? (json['harga'] ?? json['price'] ?? 0)
           : (json['harga'] ?? json['price'] ?? 0.0).toInt(),
       stock: json['jumlah_stok'] ?? json['stock'] ?? 0,
       imageUrl: json['gambar'] ?? json['imageUrl'] ?? '',

@@ -5,8 +5,8 @@ import 'auth_service.dart';
 class PaymentService {
   final AuthService _authService = AuthService();
 
-  /// Meminta snap token + payment_url dari backend ke Midtrans
-  /// Mengembalikan Map berisi { snap_token, payment_url } atau null jika gagal
+
+
   Future<Map<String, dynamic>?> getSnapToken(int idPesanan) async {
     try {
       final token = await _authService.token;

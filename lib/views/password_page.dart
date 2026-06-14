@@ -69,7 +69,7 @@ class _PasswordPageUIState extends State<_PasswordPageUI> {
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 60, bottom: 30),
@@ -99,12 +99,12 @@ class _PasswordPageUIState extends State<_PasswordPageUI> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 48), // Balance for back button
+                      const SizedBox(width: 48),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Lock Icon Frame
+
                 Container(
                   width: 90,
                   height: 90,
@@ -130,7 +130,7 @@ class _PasswordPageUIState extends State<_PasswordPageUI> {
 
           const SizedBox(height: 30),
 
-          // Form
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),

@@ -11,7 +11,7 @@ class AdminProfilController extends ChangeNotifier {
   String? errorMessage;
   String? successMessage;
 
-  /// Fetch apotek details by pharmacy ID.
+
   Future<void> fetchApotekDetails(String? pharmacyId) async {
     if (pharmacyId == null) return;
 
@@ -31,8 +31,8 @@ class AdminProfilController extends ChangeNotifier {
     } catch (_) {}
   }
 
-  /// Update admin profile (name and phone) via API.
-  /// Returns the updated UserModel on success, null on failure.
+
+
   Future<UserModel?> updateProfile({
     required UserModel currentUser,
     required String name,
@@ -86,7 +86,7 @@ class AdminProfilController extends ChangeNotifier {
     }
   }
 
-  /// Get apotek info for display.
+
   String getApotekName() => apotekData?['nama_apotek'] ?? '-';
   String getApotekAddress() => apotekData?['alamat'] ?? '-';
   String getApotekLat() => (apotekData?['latitude'] ?? apotekData?['lat'] ?? '-').toString();

@@ -87,7 +87,7 @@ class _DataPribadiUIState extends State<_DataPribadiUI> {
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 60, bottom: 30),
@@ -117,12 +117,12 @@ class _DataPribadiUIState extends State<_DataPribadiUI> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 48), // Balance for back button
+                      const SizedBox(width: 48),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Avatar Frame
+
                 Container(
                   width: 90,
                   height: 90,
@@ -164,7 +164,7 @@ class _DataPribadiUIState extends State<_DataPribadiUI> {
 
           const SizedBox(height: 30),
 
-          // Form
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),

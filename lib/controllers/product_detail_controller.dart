@@ -16,7 +16,7 @@ class ProductDetailController extends ChangeNotifier {
   double? apotekLng;
   String? noHpApotek;
 
-  double distanceInKm = 2.5; // Fallback distance (2.5 km -> Rp 10.000)
+  double distanceInKm = 2.5;
   bool isCalculatingDistance = false;
 
   Future<void> fetchApotekInfo(dynamic targetId, String userAddress) async {
@@ -186,7 +186,7 @@ class ProductDetailController extends ChangeNotifier {
     }
   }
 
-  // --- Checkout Sheet State ---
+
   bool isSubmitting = false;
   String paymentMethod = 'COD';
   bool useCoins = false;

@@ -53,7 +53,7 @@ class _ProductDetailPageUI extends StatelessWidget {
       final success = await cartProvider.addToCart(idObatInt, 1);
 
       if (context.mounted) {
-        Navigator.pop(context); // Tutup dialog loading
+        Navigator.pop(context);
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -72,7 +72,7 @@ class _ProductDetailPageUI extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.pop(context); // Tutup dialog loading
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
@@ -102,7 +102,7 @@ class _ProductDetailPageUI extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Gambar Obat & Back Button
+
               Stack(
                 children: [
                   Image.network(
@@ -134,7 +134,7 @@ class _ProductDetailPageUI extends StatelessWidget {
                 ],
               ),
 
-              // Product Info Block
+
               Container(
                 color: Colors.white,
                 width: double.infinity,
@@ -173,7 +173,7 @@ class _ProductDetailPageUI extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // Description Block
+
               Container(
                 color: Colors.white,
                 width: double.infinity,
@@ -190,7 +190,7 @@ class _ProductDetailPageUI extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // Apotek Profile Card
+
               GestureDetector(
                 onTap: controller.isLoadingApotek
                     ? null
@@ -356,7 +356,7 @@ class _CheckoutSheet extends StatelessWidget {
         final paymentUrl = result['payment_url'];
         final idPesanan = result['idPesanan'];
         if (paymentUrl != null) {
-          Navigator.pop(context); // Close sheet
+          Navigator.pop(context);
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -392,7 +392,7 @@ class _CheckoutSheet extends StatelessWidget {
     final price = product['harga'] ?? product['price'] ?? 0;
     final name = product['nama_obat'] ?? product['name'] ?? 'Nama Obat';
     final productSubtotal = price * controller.quantity;
-    
+
     final shippingFee = (controller.distanceInKm * 4000).round();
     final coinDiscount = controller.useCoins ? 1000 : 0;
     final grandTotal = productSubtotal + shippingFee - coinDiscount;

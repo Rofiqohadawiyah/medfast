@@ -4,7 +4,7 @@ import '../models/user_model.dart';
 import 'api_client.dart';
 
 class AuthService {
-  // Mendapatkan data user saat ini dari SharedPreferences (offline/local cache)
+
   Future<UserModel?> get currentUser async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString('user_data');
@@ -14,13 +14,13 @@ class AuthService {
     return null;
   }
 
-  // Mendapatkan token saat ini
+
   Future<String?> get token async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('jwt_token');
   }
 
-  // Register user baru (Pelanggan)
+
   Future<UserModel?> registerWithEmailAndPassword(
       String name, String email, String password, String phone, String role) async {
     try {
@@ -30,7 +30,7 @@ class AuthService {
         'password': password,
         'no_hp': phone,
         'role': role,
-        'alamat': '', // Alamat dikosongkan saat registrasi awal
+        'alamat': '',
       });
 
       final responseBody = jsonDecode(response.body);
@@ -46,12 +46,12 @@ class AuthService {
     }
   }
 
-  // Register admin baru dengan kode apotek
+
   Future<UserModel?> registerAdmin(
       String name, String email, String password, String phone, String pharmacyId, String pharmacyName, {String? kodeApotek}) async {
     try {
-      // Jika kodeApotek dikirim lewat parameter, gunakan itu. 
-      // Jika tidak, asumsikan pharmacyId berisi kode apotek (karena dipass dari UI)
+
+
       final codeToUse = kodeApotek ?? pharmacyId;
 
       final response = await ApiClient.post('/auth/register', {
@@ -77,7 +77,7 @@ class AuthService {
     }
   }
 
-  // Login user
+
   Future<UserModel?> loginWithEmailAndPassword(String email, String password) async {
     try {
       final response = await ApiClient.post('/auth/login', {
@@ -91,7 +91,7 @@ class AuthService {
         final token = responseBody['token'];
         final userData = responseBody['user'];
 
-        // Simpan ke SharedPreferences
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', token);
         await prefs.setString('user_data', jsonEncode(userData));
@@ -105,20 +105,20 @@ class AuthService {
     }
   }
 
-  // Mendapatkan data user berdasarkan token JWT (mengambil dari API /profile)
+
   Future<UserModel?> getUserData(String uid) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedToken = prefs.getString('jwt_token');
-      
+
       if (savedToken == null) return null;
 
       final response = await ApiClient.get('/profile', token: savedToken);
       if (response.statusCode == 200) {
         final rawData = jsonDecode(response.body);
-        
-        // Handle berbagai struktur response:
-        // { user: {...} }, { data: {...} }, { result: {...} }, atau flat object
+
+
+
         Map<String, dynamic> userData;
         if (rawData is Map<String, dynamic>) {
           Map<String, dynamic>? nested;
@@ -133,10 +133,10 @@ class AuthService {
         } else {
           return null;
         }
-        
-        // Update local cache dengan user object (bukan raw body)
+
+
         await prefs.setString('user_data', jsonEncode(userData));
-        
+
         return UserModel.fromJson(userData);
       }
       return null;
@@ -146,7 +146,7 @@ class AuthService {
     }
   }
 
-  // Logout
+
   Future<void> signOut() async {
     try {
       final prefs = await SharedPreferences.getInstance();

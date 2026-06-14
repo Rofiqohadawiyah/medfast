@@ -4,7 +4,7 @@ import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  
+
   UserModel? _userModel;
   bool _isLoading = false;
   String _errorMessage = '';
@@ -24,7 +24,7 @@ class AuthProvider with ChangeNotifier {
         _userModel = cachedUser;
         _isLoading = false;
         notifyListeners();
-        // Coba perbarui data profil terbaru dari server secara background
+
         _authService.getUserData(cachedUser.uid).then((updatedUser) {
           if (updatedUser != null) {
             _userModel = updatedUser;

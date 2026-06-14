@@ -122,7 +122,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                 ),
                 const Divider(height: 32),
 
-                // Item list
+
                 const Text('Daftar Obat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 ...detailItems.map((item) {
@@ -143,7 +143,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                 }).toList(),
                 const Divider(height: 32),
 
-                // Payment Info
+
                 const Text('Informasi Pembayaran', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Row(
@@ -177,7 +177,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                 ),
                 const Divider(height: 32),
 
-                // Delivery Info
+
                 const Text('Informasi Pengiriman', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Row(
@@ -206,7 +206,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                 ),
                 const Divider(height: 32),
 
-                // Grand Total
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -215,12 +215,12 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                   ],
                 ),
 
-                // Action Buttons inside sheet
+
                 const SizedBox(height: 24),
                 const Text('Aksi Admin', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
 
-                // Konfirmasi Pembayaran Manual
+
                 if (pembayaran['status_pembayaran'] != 'lunas' && pembayaran['status_pembayaran'] != 'berhasil') ...[
                   SizedBox(
                     width: double.infinity,
@@ -239,7 +239,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                         if (pId != null) {
                           controller.konfirmasiPembayaran(pId.toString(), _apotekId);
                         } else {
-                          // Jika payment ID belum ada (misal COD atau error backend), beritahu admin
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('ID Pembayaran tidak ditemukan untuk pesanan ini')),
                           );
@@ -250,7 +250,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                   const SizedBox(height: 10),
                 ],
 
-                // Chat Pelanggan
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -268,8 +268,8 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
                     label: const Text('Chat Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
                   ),
                 ),
-                
-                // Ubah Status Pesanan
+
+
                 if (nextList.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   const Text('Ubah Status Pesanan', style: TextStyle(fontSize: 14, color: Colors.black54)),
@@ -321,7 +321,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
   Widget build(BuildContext context) {
     final controller = context.watch<AdminPesananController>();
 
-    // Show feedback messages
+
     if (controller.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -343,7 +343,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 0),
@@ -373,7 +373,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
             ),
           ),
 
-          // Content
+
           Expanded(
             child: controller.isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
@@ -439,7 +439,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Order ID & Status Badge
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -479,7 +479,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
             child: Divider(color: Colors.black12, height: 1),
           ),
 
-          // Row 2: Customer Name & Date
+
           Row(
             children: [
               const Icon(Icons.person_outline_rounded, size: 18, color: AppColors.darkGreen),
@@ -507,7 +507,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
           ),
           const SizedBox(height: 12),
 
-          // Row 3: Items List
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -579,7 +579,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
             child: Divider(color: Colors.black12, height: 1),
           ),
 
-          // Row 4: Total & Action Buttons
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -733,7 +733,7 @@ class _AdminPesananUIState extends State<_AdminPesananUI> with SingleTickerProvi
     final chatId = await controller.createChatRoom(userUidParsed, idAdminParsed, idApotekParsed);
 
     if (context.mounted) {
-      Navigator.pop(context); // Pop loading indicator
+      Navigator.pop(context);
       if (chatId != null) {
         Navigator.push(
           context,

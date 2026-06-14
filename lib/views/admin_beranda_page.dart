@@ -54,7 +54,7 @@ class _AdminBerandaUIState extends State<_AdminBerandaUI> {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              // ─── Header ────────────────────────────────────────
+
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 30),
@@ -101,7 +101,7 @@ class _AdminBerandaUIState extends State<_AdminBerandaUI> {
 
               const SizedBox(height: 20),
 
-              // ─── Quick Stats ────────────────────────────────────
+
               if (controller.isLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 30),
@@ -128,7 +128,7 @@ class _AdminBerandaUIState extends State<_AdminBerandaUI> {
 
                 const SizedBox(height: 24),
 
-                // Total Pendapatan
+
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
@@ -170,7 +170,7 @@ class _AdminBerandaUIState extends State<_AdminBerandaUI> {
 
                 const SizedBox(height: 32),
 
-                // ─── Menu Cepat ─────────────────────────────────────
+
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24),
                   child: Align(
@@ -208,7 +208,7 @@ class _AdminBerandaUIState extends State<_AdminBerandaUI> {
 
                 const SizedBox(height: 24),
 
-                // ─── Pesanan Terbaru ────────────────────────────────
+
                 if (controller.latestPesanan.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -271,7 +271,7 @@ class _AdminBerandaUIState extends State<_AdminBerandaUI> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  label.replaceFirst(' ', '\n'), 
+                  label.replaceFirst(' ', '\n'),
                   style: const TextStyle(color: Colors.black54, fontSize: 11, fontWeight: FontWeight.w600, height: 1.2),
                 ),
               ),

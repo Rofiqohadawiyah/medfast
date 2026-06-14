@@ -79,7 +79,7 @@ class KeranjangController extends ChangeNotifier {
         }
       }
 
-      final totalHarga = calculatedTotal + 10000; // Flat ongkir
+      final totalHarga = calculatedTotal + 10000;
 
       final pesananRes = await ApiClient.post('/pesanan', {
         'id_apotek': idApotek,

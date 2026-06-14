@@ -10,7 +10,7 @@ class SearchController extends ChangeNotifier {
   List<dynamic> filteredMedicines = [];
   bool isLoading = false;
 
-  LatLng userLocation = const LatLng(-8.1647, 113.7152); // Default Jember
+  LatLng userLocation = const LatLng(-8.1647, 113.7152);
   bool locationLoaded = false;
   String searchQuery = '';
 
@@ -18,7 +18,7 @@ class SearchController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    // 1. Fetch user location (Prioritize GPS first, fallback to Nominatim geocoding)
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (serviceEnabled) {
@@ -60,7 +60,7 @@ class SearchController extends ChangeNotifier {
       } catch (_) {}
     }
 
-    // Panggil API secara bersamaan
+
     try {
       final responses = await Future.wait([
         ApiClient.get('/apotek'),

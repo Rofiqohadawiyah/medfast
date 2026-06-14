@@ -63,7 +63,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
 
   @override
   void dispose() {
-    // Tandai sudah dibaca sebelum keluar
+
     try {
       final controller = context.read<ChatController>();
       controller.markAsRead(widget.chatId);
@@ -178,7 +178,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(controller.errorMessage!), backgroundColor: Colors.redAccent),
         );
-        controller.errorMessage = null; // reset
+        controller.errorMessage = null;
       });
     }
 
@@ -200,7 +200,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
     );
   }
 
-  /// Header bar with room name and online status.
+
   Widget _buildHeader(BuildContext context) {
     return Container(
       height: 120,
@@ -246,7 +246,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
     );
   }
 
-  /// Empty state when there are no messages yet.
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -260,7 +260,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
     );
   }
 
-  /// The scrollable list of chat messages.
+
   Widget _buildMessageList(ChatController controller, dynamic user) {
     return ListView.builder(
       controller: _scrollController,
@@ -302,7 +302,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
     );
   }
 
-  /// Day separator header (e.g. "Hari Ini", "Kemarin").
+
   Widget _buildDayHeader(String text) {
     return Center(
       child: Container(
@@ -320,7 +320,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
     );
   }
 
-  /// Individual chat bubble widget.
+
   Widget _buildChatBubble(String text, bool isOnRightSide, String time) {
     final controller = context.read<ChatController>();
     final bool isImage = controller.isImageUrl(text);
@@ -386,7 +386,7 @@ class _ChatPageUIState extends State<_ChatPageUI> {
     );
   }
 
-  /// Bottom message input bar with image picker and send button.
+
   Widget _buildMessageInput(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

@@ -70,7 +70,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(
@@ -142,7 +142,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
           const SizedBox(height: 20),
 
-          // Judul + Tombol Tambah
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
@@ -180,7 +180,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
           const SizedBox(height: 12),
 
-          // List Produk dari Local API
+
           Expanded(
             child: FutureBuilder<http.Response>(
               future: ApiClient.get('/obat'),
@@ -286,7 +286,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 }
 
-// ─── Kartu produk per item ────────────────────────────────────────────────────
+
 class _ProductCard extends StatelessWidget {
   final String docId;
   final Map<String, dynamic> data;
@@ -383,7 +383,7 @@ class _ProductCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Gambar
+
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
@@ -400,7 +400,7 @@ class _ProductCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-          // Info
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,7 +464,7 @@ class _ProductCard extends StatelessWidget {
               ],
             ),
           ),
-          // Aksi
+
           Column(
             children: [
               IconButton(
@@ -491,7 +491,7 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-// ─── Bottom Sheet Tambah / Edit Produk ───────────────────────────────────────
+
 class _TambahProdukSheet extends StatefulWidget {
   final String? docId;
   final Map<String, dynamic>? existingData;
@@ -569,7 +569,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
       final authService = AuthService();
       final token = await authService.token;
 
-      // Payload data fields
+
       final fields = <String, String>{
         'nama_obat': _nameCtrl.text.trim(),
         'deskripsi': _descCtrl.text.trim(),
@@ -609,7 +609,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
           newObatId = widget.docId ?? '';
         }
 
-        // Menyimpan / memperbarui stok obat jika diinput
+
         final stockStr = _stockCtrl.text.trim();
         if (stockStr.isNotEmpty &&
             user.pharmacyId != null &&
@@ -618,8 +618,8 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
           final apotekId = int.tryParse(user.pharmacyId!) ?? 0;
           final parsedObatId = int.tryParse(newObatId);
           if (apotekId > 0 && parsedObatId != null && parsedObatId > 0) {
-            // Since this page loads from global /obat, we check if there's an existing stock for this apotek and obat.
-            // But we don't have id_stok directly, so let's try to query it first.
+
+
             int? existingStockId;
             try {
               final stockCheckRes = await ApiClient.get(
@@ -647,7 +647,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                 'stok': stockVal,
               }, token: token);
             } else {
-              // Panggil API POST /api/stok-obat untuk membuat/update stok
+
               await ApiClient.post('/stok-obat', {
                 'id_apotek': apotekId,
                 'id_obat': parsedObatId,
@@ -1143,7 +1143,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Produk berhasil dihapus')),
             );
-            Navigator.pop(context); // close bottom sheet
+            Navigator.pop(context);
             if (widget.onRefresh != null) {
               widget.onRefresh!();
             }
@@ -1174,16 +1174,16 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
       child: Container(
         height: MediaQuery.of(context).size.height * 0.92,
         decoration: const BoxDecoration(
-          color: Color(0xFFDFECE7), // Light green background from page
+          color: Color(0xFFDFECE7),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Stack(
           children: [
-            // Dark Green Header
+
             Container(
               height: 140,
               decoration: const BoxDecoration(
-                color: Color(0xFF3F5E53), // Forest green/teal header
+                color: Color(0xFF3F5E53),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
@@ -1212,10 +1212,10 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                 ],
               ),
             ),
-            
-            // White Form Container
+
+
             Positioned(
-              top: 80, // Overlap the header
+              top: 80,
               left: 20,
               right: 20,
               bottom: 20,
@@ -1241,7 +1241,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (_isEdit) ...[
-                            // Edit Mode Photo Picker
+
                             _buildEditPhotoPicker(),
                             const SizedBox(height: 20),
                             _editField(
@@ -1292,8 +1292,8 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                               hintText: 'Digunakan untuk meredakan nyeri...',
                             ),
                             const SizedBox(height: 24),
-                            
-                            // Submit Button Edit Mode
+
+
                             SizedBox(
                               width: double.infinity,
                               height: 52,
@@ -1327,7 +1327,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                                       ),
                               ),
                             ),
-                            
+
                             const SizedBox(height: 16),
                             Center(
                               child: TextButton(
@@ -1343,7 +1343,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                               ),
                             ),
                           ] else ...[
-                            // Add Mode (Dashed upload photo and vertical layout)
+
                             _buildPhotoPicker(),
                             const SizedBox(height: 20),
                             _customField(
@@ -1382,8 +1382,8 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
                               hintText: 'Digunakan untuk meredakan nyeri ringan hingga sedang...',
                             ),
                             const SizedBox(height: 24),
-                            
-                            // Submit Button Add Mode
+
+
                             SizedBox(
                               width: double.infinity,
                               height: 52,
@@ -1432,7 +1432,7 @@ class _TambahProdukSheetState extends State<_TambahProdukSheet> {
   }
 }
 
-// ─── Dashed Border Custom Painter ──────────────────────────────────────────
+
 class DashedRectPainter extends CustomPainter {
   final Color color;
   final double strokeWidth;

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'main_screen.dart';
 
-// Conditional imports
+
 import 'payment_webview_native.dart' if (dart.library.html) 'payment_webview_web.dart' as payment_impl;
 
 class PaymentWebviewPage extends StatelessWidget {
@@ -22,7 +22,7 @@ class PaymentWebviewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      // On web, open URL in new tab and show waiting page
+
       return _WebPaymentPage(
         paymentUrl: paymentUrl,
         idPesanan: idPesanan,
@@ -30,7 +30,7 @@ class PaymentWebviewPage extends StatelessWidget {
         onFailure: onFailure,
       );
     } else {
-      // On mobile, use the native WebView
+
       return payment_impl.NativePaymentWebview(
         paymentUrl: paymentUrl,
         idPesanan: idPesanan,
@@ -41,7 +41,7 @@ class PaymentWebviewPage extends StatelessWidget {
   }
 }
 
-/// Web-specific payment page that opens Midtrans in a new tab
+
 class _WebPaymentPage extends StatefulWidget {
   final String paymentUrl;
   final int idPesanan;
@@ -65,7 +65,7 @@ class _WebPaymentPageState extends State<_WebPaymentPage> {
   @override
   void initState() {
     super.initState();
-    // Open payment URL in new tab after build
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _openPaymentUrl();
     });
@@ -84,7 +84,7 @@ class _WebPaymentPageState extends State<_WebPaymentPage> {
       backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             height: 110,
@@ -121,7 +121,7 @@ class _WebPaymentPageState extends State<_WebPaymentPage> {
             ),
           ),
 
-          // Content
+
           Expanded(
             child: Center(
               child: Padding(
@@ -151,7 +151,7 @@ class _WebPaymentPageState extends State<_WebPaymentPage> {
                       style: TextStyle(fontSize: 14, color: Colors.black54),
                     ),
                     const SizedBox(height: 32),
-                    // Button to re-open payment URL
+
                     OutlinedButton.icon(
                       onPressed: () => payment_impl.openPaymentUrl(widget.paymentUrl),
                       icon: const Icon(Icons.refresh, color: Color(0xFF3F5E53)),
@@ -166,7 +166,7 @@ class _WebPaymentPageState extends State<_WebPaymentPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Button to go to orders
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

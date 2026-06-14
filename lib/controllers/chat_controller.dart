@@ -14,10 +14,10 @@ class ChatController extends ChangeNotifier {
   IO.Socket? _socket;
   String? errorMessage;
 
-  // Need to scroll down in view when items are added, so we trigger a callback if we want
+
   VoidCallback? onMessagesUpdated;
 
-  /// Check if a text string is an image URL.
+
   bool isImageUrl(String text) {
     return text.startsWith('http') && (
       text.contains('.png') ||
@@ -30,7 +30,7 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  /// Format ISO timestamp to HH:mm display string.
+
   String formatTime(String? isoString) {
     if (isoString == null) return '';
     try {
@@ -46,7 +46,7 @@ class ChatController extends ChangeNotifier {
     }
   }
 
-  /// Get a localized day header string (Hari Ini, Kemarin, or full date).
+
   String getDayHeader(String? isoString) {
     if (isoString == null) return '';
     try {
@@ -131,17 +131,17 @@ class ChatController extends ChangeNotifier {
 
   Future<void> markAsRead(int chatId) async {
     final prefs = await SharedPreferences.getInstance();
-    
-    // Gunakan waktu dari pesan terakhir yang ada di history saat ini, bukan waktu lokal device,
-    // untuk menghindari bug jam device yang tidak sinkron (clock skew).
+
+
+
     String? latestMsgTime;
     if (messages.isNotEmpty) {
-      // Karena messages sudah di-sort ascending di loadMessages, pesan terakhir ada di ujung
+
       latestMsgTime = messages.last['waktu_kirim']?.toString();
     }
 
     final timeToSave = latestMsgTime ?? DateTime.now().toUtc().toIso8601String();
-    
+
     await prefs.setString('last_read_$chatId', timeToSave);
   }
 
@@ -161,7 +161,7 @@ class ChatController extends ChangeNotifier {
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final List<dynamic> history = decoded['data'] ?? [];
-        
+
         history.sort((a, b) {
           final tA = a['waktu_kirim']?.toString() ?? '';
           final tB = b['waktu_kirim']?.toString() ?? '';

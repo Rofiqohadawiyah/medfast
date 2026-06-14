@@ -17,7 +17,7 @@ class WelcomePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(flex: 2),
-              // LOGO DIBUAT BULAT SEMPURNA (Menghilangkan kotak putih)
+
               Container(
                 width: 200,
                 height: 200,
@@ -27,13 +27,13 @@ class WelcomePage extends StatelessWidget {
                 ),
                 child: ClipOval(
                   child: Image.asset(
-                    'assets/images/logo.jpg',
-                    fit: BoxFit.cover, // Agar gambar memenuhi lingkaran
+                    'assets/images/LogoMedFast.png',
+                    fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, size: 50),
                   ),
                 ),
               ),
-              const SizedBox(height: 12), // Jarak lebih rapat sesuai desain
+              const SizedBox(height: 12),
               const Text(
                 'MedFast',
                 style: TextStyle(
@@ -52,7 +52,7 @@ class WelcomePage extends StatelessWidget {
                 ),
               ),
               const Spacer(flex: 3),
-              // Tombol Register
+
               SizedBox(
                 width: double.infinity,
                 height: 64,
@@ -75,7 +75,7 @@ class WelcomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Login Text
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

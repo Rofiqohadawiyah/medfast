@@ -62,7 +62,7 @@ class _PilihAlamatUIState extends State<_PilihAlamatUI> {
       backgroundColor: AppColors.lightGreen,
       body: Column(
         children: [
-          // Header
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 56, left: 8, right: 16, bottom: 20),
@@ -99,7 +99,7 @@ class _PilihAlamatUIState extends State<_PilihAlamatUI> {
             ),
           ),
 
-          // Peta (bisa diklik & dicari lokasinya)
+
           Expanded(
             flex: 3,
             child: Stack(
@@ -132,8 +132,8 @@ class _PilihAlamatUIState extends State<_PilihAlamatUI> {
                     ),
                   ],
                 ),
-                
-                // Search Bar floating diatas peta
+
+
                 Positioned(
                   top: 16,
                   left: 16,
@@ -187,7 +187,7 @@ class _PilihAlamatUIState extends State<_PilihAlamatUI> {
                   ),
                 ),
 
-                // Tombol lokasi saya
+
                 Positioned(
                   bottom: 16,
                   right: 16,
@@ -200,8 +200,8 @@ class _PilihAlamatUIState extends State<_PilihAlamatUI> {
                     child: const Icon(Icons.my_location, color: AppColors.darkGreen),
                   ),
                 ),
-                
-                // Hint text
+
+
                 Positioned(
                   top: 80,
                   left: 0,
@@ -224,7 +224,7 @@ class _PilihAlamatUIState extends State<_PilihAlamatUI> {
             ),
           ),
 
-          // Panel alamat terpilih + tombol simpan
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -277,7 +277,7 @@ class _PilihAlamatUIState extends State<_PilihAlamatUI> {
                     onPressed: controller.isLoadingAddress
                         ? null
                         : () {
-                            // Kembalikan alamat ke halaman sebelumnya
+
                             Navigator.pop(context, {
                               'address': controller.selectedAddress,
                               'latitude': controller.selectedPoint.latitude,

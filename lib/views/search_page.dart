@@ -103,11 +103,11 @@ class _SearchPageUIState extends State<_SearchPageUI> {
                               final rawPrice = item['harga'] ?? item['price'] ?? 0;
                               final price = 'Rp ${rawPrice.toString()}';
                               final image = item['gambar'] ?? item['imageUrl'] ?? '';
-                              
+
                               final distVal = item['closest_distance'] as double?;
                               final apotekName = item['closest_apotek_name'] ?? 'Apotek Terdekat';
-                              
-                              // Location text display with distance information
+
+
                               final locationText = distVal != null
                                   ? '$apotekName\n(${distVal.toStringAsFixed(1)} km)'
                                   : (item['jumlah_stok'] == 0 || item['jumlah_stok'] == null

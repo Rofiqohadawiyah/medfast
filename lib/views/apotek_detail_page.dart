@@ -75,20 +75,20 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
 
     final controller = context.read<ApotekDetailController>();
     final chatId = await controller.hubungiApotek(widget.apotek, user.uid);
-    
+
     if (context.mounted) {
       if (chatId != null) {
         int? idAdmin = widget.apotek['id_admin'] != null
           ? (widget.apotek['id_admin'] as num).toInt()
           : null;
-        
+
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => ChatPage(
               chatId: chatId,
               roomName: widget.apotek['nama_apotek'] ?? 'Apotek',
-              idAdmin: idAdmin ?? 0, // Should be resolved in a real scenario
+              idAdmin: idAdmin ?? 0,
             ),
           ),
         );
@@ -117,7 +117,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
       backgroundColor: AppColors.lightGreen,
       body: CustomScrollView(
         slivers: [
-          // Banner & Header
+
           SliverAppBar(
             expandedHeight: 200,
             floating: false,
@@ -158,7 +158,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
             ),
           ),
 
-          // Apotek Details Card
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -178,7 +178,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status & Distance
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -223,7 +223,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Alamat
+
                     const Text(
                       'Alamat',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black38),
@@ -235,7 +235,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Jam Operasional
+
                     const Text(
                       'Jam Operasional',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black38),
@@ -247,7 +247,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Nomor HP
+
                     const Text(
                       'Nomor HP',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black38),
@@ -256,14 +256,14 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
                     Text(
                       noHpText,
                       style: TextStyle(
-                        fontSize: 15, 
+                        fontSize: 15,
                         color: noHpText == 'Nomor HP belum tersedia' ? Colors.black45 : Colors.black87,
                         fontStyle: noHpText == 'Nomor HP belum tersedia' ? FontStyle.italic : FontStyle.normal,
                       ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Action Buttons Row
+
                     Row(
                       children: [
                         Expanded(
@@ -305,7 +305,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
             ),
           ),
 
-          // Search & Medicine Header
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
@@ -324,7 +324,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
             ),
           ),
 
-          // Search Bar
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -354,7 +354,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
             ),
           ),
 
-          // Grid of medicines
+
           controller.isLoading
               ? const SliverToBoxAdapter(
                   child: Padding(
@@ -433,7 +433,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
+
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -445,7 +445,7 @@ class _ApotekDetailPageUIState extends State<_ApotekDetailPageUI> {
                 ),
               ),
             ),
-            // Info
+
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(

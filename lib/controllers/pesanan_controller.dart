@@ -76,8 +76,8 @@ class PesananController extends ChangeNotifier {
       final response = await ApiClient.get('/pesanan', token: token);
       if (response.statusCode == 200) {
         final List<dynamic> rawOrders = jsonDecode(response.body);
-        
-        // Fetch details in parallel to populate detail_pesanan
+
+
         final futures = rawOrders.map((o) async {
           final idPesanan = o['id_pesanan'];
           if (idPesanan != null) {

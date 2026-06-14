@@ -13,7 +13,7 @@ class AdminBerandaController extends ChangeNotifier {
   List<dynamic> latestPesanan = [];
   String? errorMessage;
 
-  /// Load summary data (product count, order stats, revenue) for the admin dashboard.
+
   Future<void> loadSummary(String? apotekId) async {
     isLoading = true;
     errorMessage = null;
@@ -47,7 +47,7 @@ class AdminBerandaController extends ChangeNotifier {
             ? allPesanan.where((p) => p['id_apotek']?.toString() == apotekId).toList()
             : allPesanan;
 
-        // Sort descending by id or created_at for recent orders
+
         pesanan.sort((a, b) {
           final idA = a['id_pesanan'] ?? a['id'] ?? 0;
           final idB = b['id_pesanan'] ?? b['id'] ?? 0;
@@ -84,7 +84,7 @@ class AdminBerandaController extends ChangeNotifier {
     }
   }
 
-  /// Format currency value (e.g. 150000 -> "150.000").
+
   String formatCurrency(double value) {
     return value.toStringAsFixed(0).replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -92,13 +92,13 @@ class AdminBerandaController extends ChangeNotifier {
     );
   }
 
-  /// Get display status from raw order status.
+
   String getDisplayStatus(Map<String, dynamic> data) {
     final rawStatus = (data['status_pesanan'] ?? data['status'] ?? '').toString().toUpperCase();
     return rawStatus == 'PENDING' ? 'MENUNGGU' : rawStatus;
   }
 
-  /// Get status badge color based on status text.
+
   Color getStatusBgColor(String status) {
     if (status == 'MENUNGGU') return const Color(0xFFFFF3E0);
     if (status == 'DIPROSES') return const Color(0xFFE3F2FD);
@@ -106,7 +106,7 @@ class AdminBerandaController extends ChangeNotifier {
     return const Color(0xFFF5F5F5);
   }
 
-  /// Get status text color based on status text.
+
   Color getStatusTextColor(String status) {
     if (status == 'MENUNGGU') return const Color(0xFFFF9800);
     if (status == 'DIPROSES') return const Color(0xFF2196F3);

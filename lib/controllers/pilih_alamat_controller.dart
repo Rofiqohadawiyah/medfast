@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 
 class PilihAlamatController extends ChangeNotifier {
-  LatLng _selectedPoint = const LatLng(-8.1647, 113.7152); // Default Jember
+  LatLng _selectedPoint = const LatLng(-8.1647, 113.7152);
   LatLng get selectedPoint => _selectedPoint;
 
   String _selectedAddress = 'Ketuk peta untuk memilih lokasi...';
@@ -57,7 +57,7 @@ class PilihAlamatController extends ChangeNotifier {
       _selectedPoint = point;
       _isLoadingLocation = false;
       notifyListeners();
-      
+
       await reverseGeocode(point);
     } catch (e) {
       _isLoadingLocation = false;
@@ -67,10 +67,10 @@ class PilihAlamatController extends ChangeNotifier {
 
   Future<LatLng?> searchAddress(String query) async {
     if (query.trim().isEmpty) return null;
-    
+
     _isSearching = true;
     notifyListeners();
-    
+
     try {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&limit=5&addressdetails=1',
@@ -79,7 +79,7 @@ class PilihAlamatController extends ChangeNotifier {
         'Accept-Language': 'id',
         'User-Agent': 'MedFastApp/1.0',
       });
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         if (data.isNotEmpty) {
@@ -87,7 +87,7 @@ class PilihAlamatController extends ChangeNotifier {
           final lat = double.parse(first['lat']);
           final lon = double.parse(first['lon']);
           final displayName = first['display_name'] ?? 'Lokasi terpilih';
-          
+
           final point = LatLng(lat, lon);
           _selectedPoint = point;
           _selectedAddress = displayName;
@@ -111,7 +111,7 @@ class PilihAlamatController extends ChangeNotifier {
     _isLoadingAddress = true;
     _selectedAddress = 'Mengambil nama jalan...';
     notifyListeners();
-    
+
     try {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=${point.latitude}&lon=${point.longitude}&zoom=18&addressdetails=1',

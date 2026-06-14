@@ -5,7 +5,7 @@ import 'auth_service.dart';
 class CartService {
   final AuthService _authService = AuthService();
 
-  // 1. Ambil daftar keranjang belanja
+
   Future<List<dynamic>> getCart() async {
     try {
       final token = await _authService.token;
@@ -20,7 +20,7 @@ class CartService {
     }
   }
 
-  // 2. Tambah item ke keranjang
+
   Future<void> addToCart(int idObat, int quantity) async {
     final token = await _authService.token;
     final response = await ApiClient.post(
@@ -36,7 +36,7 @@ class CartService {
     }
   }
 
-  // 3. Update jumlah kuantitas item
+
   Future<void> updateQuantity(int idKeranjang, int quantity) async {
     final token = await _authService.token;
     final response = await ApiClient.put(
@@ -51,7 +51,7 @@ class CartService {
     }
   }
 
-  // 4. Hapus item dari keranjang
+
   Future<void> deleteItem(int idKeranjang) async {
     final token = await _authService.token;
     final response = await ApiClient.delete(
@@ -63,7 +63,7 @@ class CartService {
     }
   }
 
-  // 5. Kosongkan seluruh keranjang
+
   Future<void> clearCart() async {
     final token = await _authService.token;
     final response = await ApiClient.delete(

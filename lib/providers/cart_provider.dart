@@ -12,7 +12,7 @@ class CartProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
 
-  // Mendapatkan total item di keranjang
+
   int get totalItems {
     int total = 0;
     for (var item in _cartItems) {
@@ -21,7 +21,7 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  // Mendapatkan total harga keranjang
+
   double get totalHarga {
     double total = 0;
     for (var item in _cartItems) {
@@ -35,7 +35,7 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  // 1. Fetch data keranjang dari backend
+
   Future<void> fetchCart() async {
     _isLoading = true;
     _errorMessage = '';
@@ -50,14 +50,14 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // 2. Tambah item ke keranjang
+
   Future<bool> addToCart(int idObat, int quantity) async {
     _isLoading = true;
     _errorMessage = '';
     notifyListeners();
     try {
       await _cartService.addToCart(idObat, quantity);
-      await fetchCart(); // Refresh data
+      await fetchCart();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -68,7 +68,7 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // 3. Update jumlah kuantitas item
+
   Future<bool> updateQuantity(int idKeranjang, int quantity) async {
     _isLoading = true;
     _errorMessage = '';
@@ -86,7 +86,7 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // 4. Hapus item dari keranjang
+
   Future<bool> deleteItem(int idKeranjang) async {
     _isLoading = true;
     _errorMessage = '';
@@ -104,7 +104,7 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // 5. Mengosongkan seluruh isi keranjang
+
   Future<bool> clearCart() async {
     _isLoading = true;
     _errorMessage = '';
